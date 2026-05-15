@@ -35,7 +35,7 @@ class imgData_config(ConfigParser):
 
 class imgData_2D(imgData_config):
 
-    def __init__(self, uid, tiled_client, sandbox_tiled, config_fn, **kwargs):
+    def __init__(self, uid, tiled_client, config_fn, sandbox_tiled=None, **kwargs):
         self.uid = uid
         super().__init__(config_fn, **kwargs)
         self.read(**kwargs)
@@ -62,7 +62,7 @@ class imgData_2D(imgData_config):
     
 
     @property
-    def wavelength(self):
+    def wavelength(self):  ## unit: angstrom
         return self.run.start['calibration_md']['Wavelength']*(10**10)
     
 
@@ -74,9 +74,9 @@ class imgData_2D(imgData_config):
         # return f'{self.detector}_image'
 
 
-    # @property
-    # def stream_length(self):
-    #     return len(self.stream_name)
+    @property
+    def stream_length(self):
+        return len(self.stream_name)
 
     @property
     def user_data(self):
@@ -150,20 +150,39 @@ class imgData_2D(imgData_config):
         return self.getboolean('SUM', 'use_flat_field_pe1c', fallback=False)
     
     @property
-    def use_flat_field_pe2c(self):
-        return self.getboolean('SUM', 'use_flat_field_pe2c', fallback=False)
-
-    @property
     def flat_field_pe1c(self):
         n_folder = self.get('PATH', 'flat_filed', fallback='flat_filed')
         n = self.get('PATH', 'flat_field_pe1c', fallback='flat_field_pe1c.tiff')
         return os.path.join(self.config_base, n_folder, n)
-    
+
+    @property
+    def use_flat_field_pe2c(self):
+        return self.getboolean('SUM', 'use_flat_field_pe2c', fallback=False)
+
     @property
     def flat_field_pe2c(self):
         n_folder = self.get('PATH', 'flat_filed', fallback='flat_filed')
         n = self.get('PATH', 'flat_field_pe2c', fallback='flat_field_pe2c.tiff')
         return os.path.join(self.config_base, n_folder, n)
+    
+    @property
+    def use_flat_field_lambda(self):
+        return self.getboolean('SUM', 'use_flat_field_lambda', fallback=False)
+
+    @property
+    def flat_field_lambda(self):
+        n_folder = self.get('PATH', 'flat_filed', fallback='flat_filed')
+        n = self.get('PATH', 'flat_field_lambda', fallback='flat_field_lambda.tiff')
+        return os.path.join(self.config_base, n_folder, n)
+
+    @property
+    def use_flat_field(self):
+        is_use = [self.use_flat_field_pe1c, 
+                  self.use_flat_field_pe2c, 
+                  self.use_flat_field_pila, 
+                  self.use_flat_field_lambda, 
+                  ]
+        return any(is_use)
     
     @property
     def T_controller(self):
@@ -224,52 +243,55 @@ class imgData_2D(imgData_config):
 
         else:
             return os.path.join(self.data_dir, 'unkown_det')
-        
+
+    
+
+    def process_sub_dir(self, sub_name:str):
+        sub_dir = os.path.join(self.process_det_dir, sub_name)
+        # Create process_sub_dir directory if it doesn't exis
+        os.makedirs(sub_dir, exist_ok=True)
+        return sub_dir
+
+
+    def output_data_path(self, sub_name:str ='img', file_type:str ='tiff'):
+        if self.use_flat_field:
+            fn = os.path.join(self.process_sub_dir(sub_name), 
+                              f'{self.file_name_prefix}_flat.{file_type}')
+            
+        else:
+            if self.stream_length==self.num_positions:
+                fn = os.path.join(self.process_sub_dir(sub_name), 
+                                  f'{self.file_name_prefix}_sum.{file_type}')
+            else:
+                fn = os.path.join(self.process_sub_dir(sub_name), 
+                                  f'{self.file_name_prefix}_sub.{file_type}')
+                
+        return fn
+
 
     @property
-    def process_img_dir(self):
-        return os.path.join(self.process_det_dir, 'img')
-    
-
-    @property
-    def process_iq_dir(self):
-        return os.path.join(self.process_det_dir, 'iq')
+    def PDF_limit(self):
+        return self.getfloat('SUM', 'PDF_limit', fallback=0.6)
 
 
     @property
-    def process_tth_dir(self):
-        return os.path.join(self.process_det_dir, 'tth')
-    
-
-    # @property
-    # def process_sq_dir(self):
-    #     return os.path.join(self.process_det_dir, 'sq')
-    
-
-    # @property
-    # def process_fq_dir(self):
-    #     return os.path.join(self.process_det_dir, 'fq')
-    
-
-    # @property
-    # def process_gr_dir(self):
-    #     return os.path.join(self.process_det_dir, 'gr')
+    def SAXS_limit(self):
+        return self.getfloat('SUM', 'SAXS_limit', fallback=2.5)
 
 
-
-    def acq_mode(self, PDF_limit=0.6, SAXS_limit=2.5, ):
-
+    @property
+    def acq_mode(self):
         try:
             distance = self.run.start['calibration_md']['Distance']
             acq_mode = ''
 
-            if distance < PDF_limit:
+            if distance < self.PDF_limit:
                 acq_mode = 'PDF'
 
-            elif (distance > PDF_limit) and (distance < SAXS_limit):
+            elif (distance > self.PDF_limit) and (distance < self.SAXS_limit):
                 acq_mode = 'XRD'
 
-            elif distance > SAXS_limit:
+            elif distance > self.SAXS_limit:
                 acq_mode = 'SAXS'
 
             else:
@@ -280,70 +302,16 @@ class imgData_2D(imgData_config):
             acq_mode = 'NoDistance'
 
         return acq_mode
-
-
-    def sum_pilatus(self):
-        """ Assuming im2 offset by -osetx, -osety, and im3 offset by +osetx, +osety """
-        
-        # run = tiled_client[uid]
-        my_im1 = np.float32(getattr(self.run, self.stream_name[0]).read()[self.img_key].to_numpy()[0][0])
-        my_im2 = np.float32(getattr(self.run, self.stream_name[1]).read()[self.img_key].to_numpy()[0][0])
-        my_im3 = np.float32(getattr(self.run, self.stream_name[2]).read()[self.img_key].to_numpy()[0][0])
-
-        if self.use_flat_field_pila:
-            flat_field = tifffile.imread(self.flat_field_pila)
-            my_im3 = my_im3 / flat_field
-            my_im2 = my_im2 / flat_field
-            my_im1 = my_im1 / flat_field
-
-        if self.acq_mode() == 'PDF':
-            mask_dir = self.pilatus_PDF
-
-        elif self.acq_mode() == 'XRD':
-            mask_dir = self.pilatus_XRD
-
-        else:
-            mask_dir = self.pilatus_PDF
-
-        # masks_pos_fn = ['Mask_pos1_ext_BS.npy', 'Mask_pos2_ext_BS.npy', 'Mask_pos3_ext_BS.npy']
-        m1_path = os.path.join(mask_dir, self.masks_pos_flist[0])
-        m2_path = os.path.join(mask_dir, self.masks_pos_flist[1])
-        m3_path = os.path.join(mask_dir, self.masks_pos_flist[2])
-        use_mask_1= np.load(m1_path)  # This is mask we are applying befor mergin images
-        use_mask_2 = np.load(m2_path) # This is mask we are applying befor mergin images
-        use_mask_3 = np.load(m3_path) # This is mask we are applying befor mergin images
-
-        my_imsum = np.ones((my_im1.shape[0]+int(2*self.osetx), my_im2.shape[1]+int(2*self.osety),3))*np.nan
-
-        my_imsum[self.osetx:-self.osetx,self.osety:-self.osety,0] = my_im3
-        my_imsum[self.osetx:-self.osetx,self.osety:-self.osety,0][use_mask_3==1] = np.nan  ##order of mask updated by CHL on 2025/11/03
-
-        my_imsum[:-int(2*self.osetx),:-int(2*self.osety):,1] = my_im2
-        my_imsum[:-int(2*self.osetx),:-int(2*self.osety):,1][use_mask_2==1] = np.nan
-
-        my_imsum[int(2*self.osetx):,int(2*self.osety):,2] = my_im1
-        my_imsum[int(2*self.osetx):,int(2*self.osety):,2][use_mask_1==1] = np.nan  ##order of mask updated by CHL on 2025/11/03
-
-        # ## Stitching sequence for SAXS setup with lambda
-        # my_imsum[self.osetx:-self.osetx,self.osety:-self.osety,0] = my_im2
-        # my_imsum[self.osetx:-self.osetx,self.osety:-self.osety,0][use_mask_2==1] = np.nan  ##order of mask updated by CHL on 2025/11/03
-
-        # my_imsum[int(2*self.osetx):,:-int(2*self.osety),1] = my_im3
-        # my_imsum[int(2*self.osetx):,:-int(2*self.osety),1][use_mask_3==1] = np.nan
-
-        # my_imsum[:-int(2*self.osetx),int(2*self.osety):,2] = my_im1
-        # my_imsum[:-int(2*self.osetx),int(2*self.osety):,2][use_mask_1==1] = np.nan  ##order of mask updated by CHL on 2025/11        return np.nanmean(my_imsum, axis=2, dtype=np.float32)
-
-        return np.nanmean(my_imsum, axis=2, dtype=np.float32)
+    
 
 
     def sum_pilatus2(self):
         """ Sum the images accroding to relative detector postions"""
 
-        if self.acq_mode() == 'PDF':
+        if self.acq_mode == 'PDF':
             mask_dir = self.pilatus_PDF
 
-        elif self.acq_mode() == 'XRD':
+        elif self.acq_mode == 'XRD':
             mask_dir = self.pilatus_XRD
 
         else:
@@ -426,21 +394,7 @@ class imgData_2D(imgData_config):
             my_imsum[start_x:end_x, start_y:end_y, i][sort_user_mask[:,:,i]==1] = np.nan
 
         return np.nanmean(my_imsum, axis=2, dtype=np.float32)
-
-
-    def save_img_pilatus(self):
-
-        # self.process_img = self.sum_pilatus()
-        self.process_img = self.sum_pilatus2()
         
-        os.makedirs(self.process_img_dir, exist_ok=True)  # Create process_img_dir directory if it doesn't exis
-
-        tiff_fn = os.path.join(self.process_img_dir, f'{self.file_name_prefix}_sum.tiff')
-        tifffile.imwrite(tiff_fn, self.process_img)
-        print(f'\n*** {os.path.basename(tiff_fn)} saved!! ***\n')
-
-        return self.process_img
-    
 
 
     def sub_dk_img(self):
@@ -462,80 +416,29 @@ class imgData_2D(imgData_config):
         return sub_img
 
 
-    def save_img_perkin(self):
 
-        # self.process_img = self.sandbox_tiled[self.dksub_uid].read()
-        
-        ## After data security, data transfer of pdfstream is done by 0MQ not Kafka 
-        self.process_img = self.sub_dk_img()
+    def save_processed_img(self):
 
-        if self.use_flat_field_pe1c or self.use_flat_field_pe2c:
-            if 'pe1' in self.detector:
-                flat_field = tifffile.imread(self.flat_field_pe1c)
-            elif 'pe2' in self.detector:
-                flat_field = tifffile.imread(self.flat_field_pe2c)
-            else:
-                flat_field = tifffile.imread(self.flat_field_pe1c)
+        if self.stream_length==self.num_positions:
+            self.process_img = self.sum_pilatus2()
 
-            self.process_img = self.process_img / flat_field
-
-        os.makedirs(self.process_img_dir, exist_ok=True)  # Create process_img_dir directory if it doesn't exis
-        
-        if (self.use_flat_field_pe1c) and ('pe1' in self.detector):
-            tiff_fn = os.path.join(self.process_img_dir, f'{self.file_name_prefix}_flat.tiff')
-        
-        elif (self.use_flat_field_pe2c) and ('pe2' in self.detector):
-            tiff_fn = os.path.join(self.process_img_dir, f'{self.file_name_prefix}_flat.tiff')
-        
         else:
-            tiff_fn = os.path.join(self.process_img_dir, f'{self.file_name_prefix}_sub.tiff')
+            if 'pe' in self.detector:
+                self.process_img = self.sub_dk_img()
+
+            else:
+                self.process_img = np.float32(getattr(self.run, self.stream_name[0]).read()[self.img_key].to_numpy()[0][0])
         
+        tiff_fn = self.output_data_path(sub_name='img', file_type='tiff')
         tifffile.imwrite(tiff_fn, self.process_img)
         print(f'\n*** {os.path.basename(tiff_fn)} saved!! ***\n')
 
         return self.process_img
 
 
-
-    def save_single_pilatus(self):
-
-        self.process_img = np.float32(getattr(self.run, self.stream_name[0]).read()[self.img_key].to_numpy()[0][0])
-
-
-        # # self.process_img = self.sandbox_tiled[self.dksub_uid].read()
-        
-        # ## After data security, data transfer of pdfstream is done by 0MQ not Kafka 
-        # self.process_img = self.sub_dk_img()
-
-        if self.use_flat_field_pe1c or self.use_flat_field_pe2c:
-            if 'pe1' in self.detector:
-                flat_field = tifffile.imread(self.flat_field_pe1c)
-            elif 'pe2' in self.detector:
-                flat_field = tifffile.imread(self.flat_field_pe2c)
-            else:
-                flat_field = tifffile.imread(self.flat_field_pe1c)
-
-            self.process_img = self.process_img / flat_field
-
-        os.makedirs(self.process_img_dir, exist_ok=True)  # Create process_img_dir directory if it doesn't exis
-        
-        if (self.use_flat_field_pe1c) and ('pe1' in self.detector):
-            tiff_fn = os.path.join(self.process_img_dir, f'{self.file_name_prefix}_flat.tiff')
-        
-        elif (self.use_flat_field_pe2c) and ('pe2' in self.detector):
-            tiff_fn = os.path.join(self.process_img_dir, f'{self.file_name_prefix}_flat.tiff')
-        
-        else:
-            tiff_fn = os.path.join(self.process_img_dir, f'{self.file_name_prefix}_sub.tiff')
-        
-        tifffile.imwrite(tiff_fn, self.process_img)
-        print(f'\n*** {os.path.basename(tiff_fn)} saved!! ***\n')
-
-        return self.process_img
     
-
     def start_process(self, doc: dict):
-        name, message = doc
+        message = doc
         if 'dark' in message['sp_plan_name']:
                 print(f"\n***** This is a DARK scan skip process data. *****\n")
                 return False
@@ -543,22 +446,22 @@ class imgData_2D(imgData_config):
             return True
         
 
-    def __call__(self, doc: dict, *args, **kwds):
-        name, message = doc
+    # def __call__(self, doc: dict, *args, **kwds):
+    #     name, message = doc
 
-        if (name == 'start') and self.start_process(doc):
-            print(
-                "\n*********************************************************\n"
-                f"\n\n{datetime.datetime.now().isoformat()} documents {name}\n"
-                f"document keys: {list(message.keys())}\n"
-                f"\n{message['uid'] = }\n")
+    #     if (name == 'start') and self.start_process(doc):
+    #         print(
+    #             "\n*********************************************************\n"
+    #             f"\n\n{datetime.datetime.now().isoformat()} documents {name}\n"
+    #             f"document keys: {list(message.keys())}\n"
+    #             f"\n{message['uid'] = }\n")
                   
-            print(f"\nThis is a data scan not dark scan. Start to process data.\n")
+    #         print(f"\nThis is a data scan not dark scan. Start to process data.\n")
 
-            uid = message['uid']
-            meta = tiled_client[uid].start
+    #         uid = message['uid']
+    #         meta = tiled_client[uid].start
 
-            print(f"\n{meta['calibration_md']['Distance'] = }\n")
+    #         print(f"\n{meta['calibration_md']['Distance'] = }\n")
 
 
 

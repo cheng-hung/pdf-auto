@@ -42,10 +42,10 @@ class img_integrate(imgData_2D.imgData_2D):
     def merged_poin(self):
         n = self.get('PATH', 'merged_poin', fallback='merged.poni')
 
-        if self.acq_mode() == 'PDF':
+        if self.acq_mode == 'PDF':
             n_folder = self.pilatus_PDF
 
-        elif self.acq_mode() == 'XRD':
+        elif self.acq_mode == 'XRD':
             n_folder = self.pilatus_XRD
 
         else:
@@ -58,10 +58,10 @@ class img_integrate(imgData_2D.imgData_2D):
     def stitched_mask(self):
         n = self.get('PATH', 'stitched_mask', fallback='stitched_mask.npy')
 
-        if self.acq_mode() == 'PDF':
+        if self.acq_mode == 'PDF':
             n_folder = self.pilatus_PDF
 
-        elif self.acq_mode() == 'XRD':
+        elif self.acq_mode == 'XRD':
             n_folder = self.pilatus_XRD
 
         else:
@@ -82,18 +82,57 @@ class img_integrate(imgData_2D.imgData_2D):
 
     @property
     def pe2c_SAXS(self):
-        n = self.get('PATH', 'pe2c_PDF', fallback='pe2c_SAXS')
+        n = self.get('PATH', 'pe2c_SAXS', fallback='pe2c_SAXS')
         return os.path.join(self.config_base, n)
     
+
+    @property
+    def lambda_SAXS(self):
+        n = self.get('PATH', 'lambda_SAXS', fallback='lambda_SAXS')
+        return os.path.join(self.config_base, n)
+    
+
+    @property
+    def poni_pilatus(self):
+        n = self.get('PATH', 'poni_pilatus', fallback='xpdAcq_calib_info.poni')
+
+        if self.acq_mode == 'PDF':
+            n_folder = self.pilatus_PDF
+
+        elif self.acq_mode == 'XRD':
+            n_folder = self.pilatus_XRD
+        
+        else:
+            n_folder = self.pilatus_PDF
+
+        return os.path.join(n_folder, n)
+    
+
+    @property
+    def mask_pilatus(self):
+        n = self.get('PATH', 'mask_pilatus', fallback='Mask.npy')
+
+        if self.acq_mode == 'PDF':
+            n_folder = self.pilatus_PDF
+        
+        elif self.acq_mode == 'XRD':
+            n_folder = self.pilatus_XRD
+        
+        else:
+            n_folder = self.pilatus_PDF
+
+        return os.path.join(n_folder, n)
+    
+
 
     @property
     def poni_pe1c(self):
         n = self.get('PATH', 'poni_pe1c', fallback='xpdAcq_calib_info.poni')
 
-        if self.acq_mode() == 'PDF':
+        if self.acq_mode == 'PDF':
             n_folder = self.pe1c_PDF
 
-        elif self.acq_mode() == 'XRD':
+        elif self.acq_mode == 'XRD':
             n_folder = self.pe1c_XRD
         
         else:
@@ -106,10 +145,10 @@ class img_integrate(imgData_2D.imgData_2D):
     def mask_pe1c(self):
         n = self.get('PATH', 'mask_pe1c', fallback='Mask.npy')
 
-        if self.acq_mode() == 'PDF':
+        if self.acq_mode == 'PDF':
             n_folder = self.pe1c_PDF
         
-        elif self.acq_mode() == 'XRD':
+        elif self.acq_mode == 'XRD':
             n_folder = self.pe1c_XRD
         
         else:
@@ -131,40 +170,68 @@ class img_integrate(imgData_2D.imgData_2D):
 
 
     @property
-    def poni_fn(self):
-        if 'pilatus' in self.detector:
-            return self.merged_poin
+    def poni_lambda(self):
+        n = self.get('PATH', 'poni_lambda', fallback='xpdAcq_calib_info.poni')
+        return os.path.join(self.lambda_SAXS, n)
+    
+
+    @property
+    def mask_lambda(self):
+        n = self.get('PATH', 'mask_lambda', fallback='Mask.npy')
+        return os.path.join(self.lambda_SAXS, n)
+
+
+    @property
+    def poni_mask_fn(self):
+
+        if self.stream_length==self.num_positions:
+            return self.merged_poin, self.stitched_mask
             
-
-        elif 'pe1' in self.detector:
-            return self.poni_pe1c
-            
-
-        elif 'pe2' in self.detector:
-            return self.poni_pe2c
-
         else:
-            return self.poni_pe1c
+            if 'pilatus' in self.detector:
+                return self.poni_pilatus, self.mask_pilatus
+            
+            elif 'pe1' in self.detector:
+                return self.poni_pe1c, self.mask_pe1c
+                
+
+            elif 'pe2' in self.detector:
+                return self.poni_pe2c, self.mask_pe2c
+            
+
+            elif 'lambda' in self.detector:
+                return self.poni_lambda, self.mask_lambda
+
+            else:
+                return self.poni_pe1c, self.mask_pe1c
 
 
     @property
     def mask_array(self):
-        if 'pilatus' in self.detector:
+
+        if self.stream_length==self.num_positions:
             return np.load(self.stitched_mask)
             
-
-        elif 'pe1' in self.detector:
-            return np.load(self.mask_pe1c)
+        else:
+            if 'pilatus' in self.detector:
+                return np.load(self.mask_pilatus)
             
 
-        elif 'pe2' in self.detector:
-            return np.load(self.mask_pe2c)
+            elif 'pe1' in self.detector:
+                return np.load(self.mask_pe1c)
+                
 
-        else:
-            return np.load(self.mask_pe1c)
+            elif 'pe2' in self.detector:
+                return np.load(self.mask_pe2c)
+            
 
+            elif 'lambda' in self.detector:
+                return np.load(self.mask_lambda)
 
-
+            else:
+                return np.load(self.mask_pe1c)
+        
+    
     @property
     def npt_rad(self):
         # equivalent to binning
@@ -189,14 +256,12 @@ class img_integrate(imgData_2D.imgData_2D):
     @property
     def ul(self):
         return self.getfloat('INTEGRATION', 'up_limit_pcfilter', fallback=99.0) 
-
-            
-
-
+    
     
     def pct_integration(self):
 
-        self.ai = pyFAI.load(self.poni_fn)
+        poni, _ = self.poni_mask_fn
+        self.ai = pyFAI.load(poni)
         
         ## perform azimuthalintegration on one image to retain 2D information
         ## i2d.shape is (self.npt_azim, self.npt_rad) which corresponds the intensity of 2D image cake
