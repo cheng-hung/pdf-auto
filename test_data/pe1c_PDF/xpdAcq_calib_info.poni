@@ -1,0 +1,14 @@
+# Nota: C-Order, 1 refers to the Y axis, 2 to the X axis
+# Calibration done on Mon Feb  9 12:36:25 2026
+poni_version: 2.1
+Detector: Detector
+Detector_config: {"pixel1": 0.00019999999999999998, "pixel2": 0.00019999999999999998, "max_shape": [2048, 2048], "orientation": 3}
+Distance: 0.20796497196076405
+Poni1: 0.2000859145640433
+Poni2: 0.20143543943329126
+Rot1: -0.0004391475818723788
+Rot2: 0.0005027978005354992
+Rot3: 0.0
+Wavelength: 1.6630000000000002e-11
+# Calibrant: CeO2
+# Image: fabio:///nsls2/auto-storage/pdf/pdfhack/legacy/processed/xpdacq_data/user_data/tiff_base/CeO2_01_PDF/pe1/CeO2_01_PDF_20260209-122710_56424b_sub.tiff

@@ -8,12 +8,12 @@ from matplotlib.gridspec import GridSpec
 
 import importlib
 # color_tuner = importlib.import_module("color_tuner").color_tuner
-bin_ndarray = importlib.import_module("kafka_uti").bin_ndarray
-get_HeaderRows = importlib.import_module("kafka_uti").get_HeaderRows
-data_to_numpy = importlib.import_module("kafka_uti").data_to_numpy
-find_nearest = importlib.import_module("kafka_uti").find_nearest
-circle_coords = importlib.import_module("kafka_uti").circle_coords
-q_to_azim = importlib.import_module("kafka_uti").q_to_azim
+bin_ndarray = importlib.import_module("utility").bin_ndarray
+get_HeaderRows = importlib.import_module("utility").get_HeaderRows
+data_to_numpy = importlib.import_module("utility").data_to_numpy
+find_nearest = importlib.import_module("utility").find_nearest
+circle_coords = importlib.import_module("utility").circle_coords
+q_to_azim = importlib.import_module("utility").q_to_azim
 
 import pyFAI
 

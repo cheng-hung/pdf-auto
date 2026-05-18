@@ -6,8 +6,8 @@ from diffpy.pdfgetx import PDFConfig
 
 import importlib
 img_integrate = importlib.import_module("img_integrate")
-auto_bkg = importlib.import_module("kafka_uti").auto_bkg
-get_HeaderRows = importlib.import_module("kafka_uti").get_HeaderRows
+auto_bkg = importlib.import_module("utility").auto_bkg
+get_HeaderRows = importlib.import_module("utility").get_HeaderRows
 
 class img_getpdf(img_integrate.img_integrate):
 

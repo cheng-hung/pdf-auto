@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from tiled.client import from_profile, from_uri
 import time
+from pdfstream.vend.qt_kicker import install_qt_kicker
 
 
 import importlib
@@ -18,7 +19,8 @@ server_log = importlib.import_module("utility").server_log
 # bin_ndarray = importlib.import_module("utility").bin_ndarray
 
 "--------------------------USER INPUTS------------------------------"
-ini_config = '/home/xf28id1/.ipython/profile_collection/scripts/pdf_Kafka/pilatus_kafka_config.ini'
+ini_config = '/home/xf28id1/src/pdf-auto/pilatus_zmq_config.ini'
+# tiled_writing_client = from_uri('https://tiled.nsls2.bnl.gov', api_key=os.getenv("TILED_BLUESKY_WRITING_API_KEY_PDF", ""))["pdf"]["migration"]
 # tiled_client = from_profile('pdf')
 # sandbox_tiled = from_uri("https://tiled.nsls2.bnl.gov/api/v1/metadata/xpd/sandbox")
 # factory_log = server_log()
@@ -38,9 +40,10 @@ plt.rcParams["figure.raise_window"] = False
 
 
 
-class plugin0_factory:
+class plugin0_factory():
 
     def __init__(self, beamline_acronym:str, ini_config:str):
+        # self.tiled_client = from_uri('https://tiled.nsls2.bnl.gov')[beamline_acronym]["migration"]
         self.tiled_client = from_profile(beamline_acronym)
         self.ini_config = ini_config
         self.img_analyzer = None
@@ -61,6 +64,12 @@ class plugin0_factory:
             if 'dark' in message['sp_plan_name']:
                 print(f"\n***** This is a DARK scan skip process data. *****\n")
                 start_process = False
+            
+            elif 'original_run_uid' in message.keys():
+                print(f"\n***** This is a analysis scan already processed by PDFstream. *****\n")
+                start_process = False
+                self.factory_log.do_process = False
+
             else:
                 start_process = True
         
@@ -114,53 +123,54 @@ class plugin0_factory:
 
             ## Process image: stitchung or dark subtraction
             time.sleep(1) ## wait for data saved into data broker
-            print(f"\nStart to stitch {self.img_analyzer.run.start['sp_detector']} data: uid = {self.img_analyzer.uid}\n")
+            # print(f"\nStart to process {self.img_analyzer.run.start['sp_detector']} data: uid = {self.img_analyzer.uid}\n")
+            print(f"\nStart to process {self.img_analyzer.run.start['detectors'][0]} data: uid = {self.img_analyzer.uid}\n")
             self.img_analyzer.save_processed_img()
-            _, mask_name = self.img_analyzer.poni_mask_fn
+            poni_name, mask_name = self.img_analyzer.poni_mask_fn
             print(f'\nApply {mask_name = }\n')
 
             ## Plot unmasked 2D image rings with histogram
             tiff3_tuner = plotter.plot_tiff3(self.img_analyzer.process_img, self.img_analyzer.mask_array, use_mask=False, histogram=True)
             tiff3_tuner()
 
-            ## pyFai integration: 2D to 1Dcolor_str
-            print(f"\nStart to do 2D integration: uid = {self.img_analyzer.uid}\n")
-            iq_df, iq_fn, unrolled_array = self.img_analyzer.pct_integration()
-            # img_tuner4 = plotter.plot_tiff4(unrolled_array, iq_df.iloc[:,0])
+            # ## pyFai integration: 2D to 1Dcolor_str
+            # print(f"\nStart to do 2D integration: uid = {self.img_analyzer.uid}\n")
+            # iq_df, iq_fn, unrolled_array = self.img_analyzer.pct_integration()
+            # # img_tuner4 = plotter.plot_tiff4(unrolled_array, iq_df.iloc[:,0])
             
-            ## Plot masked 2D image rings with iq data
-            maskImg_iq_tuner = plotter.plot_maskImg_iq(self.img_analyzer.process_img,  
-                                                        self.img_analyzer.mask_array, 
-                                                        unrolled_array, 
-                                                        iq_fn,
-                                                        self.img_analyzer.poni_fn, 
-                                                        binning=2, 
-                                                        )
-            maskImg_iq_tuner()
+            # ## Plot masked 2D image rings with iq data
+            # maskImg_iq_tuner = plotter.plot_maskImg_iq(self.img_analyzer.process_img,  
+            #                                             self.img_analyzer.mask_array, 
+            #                                             unrolled_array, 
+            #                                             iq_fn,
+            #                                             poni_name, 
+            #                                             binning=2, 
+            #                                             )
+            # maskImg_iq_tuner()
 
-            ## Plot masked and unrolled image cake
-            # tiff4_tuner4 = plotter.plot_tiff4(unrolled_array, None, binned=True)
-            # tiff4_tuner4()
+            # ## Plot masked and unrolled image cake
+            # # tiff4_tuner4 = plotter.plot_tiff4(unrolled_array, None, binned=True)
+            # # tiff4_tuner4()
 
-            ## Data reduction: I(Q) to G(r)
-            if (self.img_analyzer.do_reduction) and (self.img_analyzer.acq_mode=='PDF'):
-            # if img_analyzer.acq_mode=='PDF':
-                print(f"\nStart to reduce sq, fq, gr: uid = {self.img_analyzer.uid}\n")
-                # iq_array = iq_df.to_numpy().T
-                sqfqgr_path = self.img_analyzer.get_gr(iq_df)
-                bkg_scale = self.img_analyzer.pdfconfig().bgscale[0]
-                bkg_fn = self.img_analyzer.pdfconfig_dict['backgroundfile']
-                plotter.plot_sqfqgr(sqfqgr_path, bkg_scale, bkg_fn)
+            # ## Data reduction: I(Q) to G(r)
+            # if (self.img_analyzer.do_reduction) and (self.img_analyzer.acq_mode=='PDF'):
+            # # if img_analyzer.acq_mode=='PDF':
+            #     print(f"\nStart to reduce sq, fq, gr: uid = {self.img_analyzer.uid}\n")
+            #     # iq_array = iq_df.to_numpy().T
+            #     sqfqgr_path = self.img_analyzer.get_gr(iq_df)
+            #     bkg_scale = self.img_analyzer.pdfconfig().bgscale[0]
+            #     bkg_fn = self.img_analyzer.pdfconfig_dict['backgroundfile']
+            #     plotter.plot_sqfqgr(sqfqgr_path, bkg_scale, bkg_fn)
             
-            else:
-                print('This is an XRD scan. Skip gr transformation.')
+            # else:
+            #     print('This is an XRD scan. Skip gr transformation.')
 
 
-            self.factory_log.colo_str = plotter.color_str
+            # self.factory_log.colo_str = plotter.color_str
             
-            # a reminder to finish data processing
-            self.factory_log.do_process = False
-            print(f'\n{self.factory_log.do_process = }\n')
+            # # a reminder to finish data processing
+            # self.factory_log.do_process = False
+            # print(f'\n{self.factory_log.do_process = }\n')
             print('\n########### Events printing division ############\n')
 
         return [], []
@@ -181,10 +191,27 @@ class plugin0_Router(RunRouter):
 
 def plug0_server(beamline_acronym, ini_config=ini_config,):
     
-    router = plugin0_Router(beamline_acronym, ini_config)
+    # factory = plugin0_factory(beamline_acronym, ini_config)
+    # router = plugin0_Router(beamline_acronym, ini_config)
+    def print_message(name, doc):
+        message = doc
+        print(
+            f"\n{datetime.datetime.now().isoformat()} document: {name}\n"
+            f"\ndocument keys: {list(message.keys())}\n"
+            f"\ncontents: {pprint.pformat(message)}\n"
+        )
 
-    rd = RemoteDispatcher("ipc:///var/lib/bluesky-zmq-proxy/xpd-ipc-in-ipc-out/out.sock")
-    rd.subscribe(router)
+        fig, ax = plt.subplots()
+        x = np.arange(-10, 10, 0.1)
+        y = np.sin(x)
+        ax.plot(x,y)
+        fig.canvas.manager.show()
+        fig.canvas.flush_events()
+    
+    rd = RemoteDispatcher("ipc:///var/lib/bluesky-zmq-proxy/pdf-ipc-in-ipc-out/out.sock")
+    install_qt_kicker(rd.loop)
+    rd.subscribe(print_message)
+    print('\n\n Subscribe to RemoteDispatcher and start the server \n\n')
     rd.start()
 
 

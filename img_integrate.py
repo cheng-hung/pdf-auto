@@ -322,31 +322,12 @@ class img_integrate(imgData_2D.imgData_2D):
         if type(self.temperature) is float:
             md.update({'temperature': f'{self.temperature:.2f} K'})
 
-        os.makedirs(self.process_iq_dir, exist_ok=True)  # Create process_iq_dir directory if it doesn't exis
-        os.makedirs(self.process_tth_dir, exist_ok=True)  # Create process_tth_dir directory if it doesn't exis
+        iq_fn = self.output_data_path(sub_name='iq', file_type='iq')
+        tth_fn = self.output_data_path(sub_name='tth', file_type='xy')
 
-        if 'pilatus' in self.detector:
-            iq_fn = os.path.join(self.process_iq_dir, f'{self.file_name_prefix}_sum.iq')
-            tth_fn = os.path.join(self.process_tth_dir, f'{self.file_name_prefix}_sum.xy')
+        os.makedirs(os.path.dirname(iq_fn), exist_ok=True)  # Create process_iq_dir directory if it doesn't exis
+        os.makedirs(os.path.dirname(tth_fn), exist_ok=True)  # Create process_tth_dir directory if it doesn't exis
 
-        elif 'pe1' in self.detector:
-            if (self.use_flat_field_pe1c) and ('pe1' in self.detector):
-                iq_fn = os.path.join(self.process_iq_dir, f'{self.file_name_prefix}_flat.iq')
-                tth_fn = os.path.join(self.process_tth_dir, f'{self.file_name_prefix}_flat.xy')
-            else:
-                iq_fn = os.path.join(self.process_iq_dir, f'{self.file_name_prefix}_sub.iq')
-                tth_fn = os.path.join(self.process_tth_dir, f'{self.file_name_prefix}_sub.xy')
-
-
-        elif 'pe2' in self.detector:
-            iq_fn = os.path.join(self.process_iq_dir, f'{self.file_name_prefix}_SAXS.iq')
-            tth_fn = os.path.join(self.process_tth_dir, f'{self.file_name_prefix}_SAXS.xy')
-
-        else:
-            iq_fn = os.path.join(self.process_iq_dir, f'{self.file_name_prefix}_sub.iq')
-            tth_fn = os.path.join(self.process_tth_dir, f'{self.file_name_prefix}_sub.xy')
-
-        
         ## num_row will be the number of rows of the header in saved iq data file
         self.num_rows_header = iq_saver(iq_fn, iq_df, md)
         iq_saver(tth_fn, iq_df10, md, header=['tth', 'I(q)'])

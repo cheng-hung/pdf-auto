@@ -5,17 +5,18 @@ import numpy.ma as ma
 import os
 
 import importlib
-get_HeaderRows = importlib.import_module("kafka_uti").get_HeaderRows
-random_color = importlib.import_module("kafka_uti").random_color
+get_HeaderRows = importlib.import_module("utility").get_HeaderRows
+random_color = importlib.import_module("utility").random_color
 histogram_tuner = importlib.import_module("subplot_tuner").histogram_tuner
 ThreeSub_tuner = importlib.import_module("subplot_tuner").ThreeSub_tuner
-bin_ndarray = importlib.import_module("kafka_uti").bin_ndarray
+bin_ndarray = importlib.import_module("utility").bin_ndarray
 # Pilatus_getpdf = importlib.import_module("pilatus_getpdf_v2.2").Pilatus_Int
 
 class open_figures():
     def __init__(self, figure_labels):
         for i in figure_labels:
             plt.figure(num=i, figsize=(8,6))
+        plt.ion()
 
 
 class img_plotter(open_figures):
@@ -40,6 +41,7 @@ class img_plotter(open_figures):
 
 
     def plot_tiff3(self, img, mask, use_mask=False, histogram=False, aspect=None):
+        plt.ion()
         
         try:
             f = plt.figure(self.fig[0])
@@ -48,7 +50,7 @@ class img_plotter(open_figures):
             f = plt.figure(self.fig[-1])
 
         plt.clf()
-        # ax = f.gca()
+        ax = f.gca()
 
         if type(mask) is str:
             mask_array = np.load(mask)
@@ -73,12 +75,14 @@ class img_plotter(open_figures):
 
         f.canvas.manager.show()
         f.canvas.flush_events()
+        # f.canvas.draw_idle()
 
         return img_tuner
 
         
 
     def plot_maskImg_iq(self, img, mask, unrolled_array, iq_fn, poni_fn, aspect=None, binning=1):
+        plt.ion()
         
         try: 
             f = plt.figure(self.fig[1])
@@ -127,12 +131,14 @@ class img_plotter(open_figures):
 
         f.canvas.manager.show()
         f.canvas.flush_events()
+        # f.canvas.draw_idle()
 
         return img_tuner
 
         
 
     def plot_sqfqgr(self, sqfqgr_path, bkg_scale, bkg_fn, title=None):
+        plt.ion()
 
         try: 
             f = plt.figure(self.fig[1])
@@ -186,6 +192,7 @@ class img_plotter(open_figures):
 
             f.canvas.manager.show()
             f.canvas.flush_events()
+            # f.canvas.draw_idle()
         
 
 

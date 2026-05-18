@@ -1,0 +1,73 @@
+[workspace]
+channels = ["conda-forge"]
+name = "pdf-auto"
+platforms = ["linux-64"]
+version = "2026-1.0"
+
+[system-requirements]
+libc = "2.17"
+
+[feature.profile.dependencies]
+bluesky-base = "==1.15.0"
+bluesky-queueserver = "*"
+bluesky-queueserver-api = "*"
+matplotlib-base = ">=3.7,<4"
+networkx = ">=3.4.2,<4"
+nslsii = "==0.11.4"
+numpy = "*"
+ophyd = "==1.11.0"
+pyepics = "*"
+python = ">=3.12,<3.13"
+semver = ">=3.0.4,<4"
+colorlog = ">=6.9.0,<7"
+databroker = "==2.0.0b68"
+bluesky-tiled-plugins = ">=2.0.0b67"
+lmfit = ">=1.3.4,<2"
+bluesky-darkframes = ">=0.6.0,<0.7"
+hdf5-external-filter-plugins = ">=0.1.0,<0.2"
+blosc-hdf5-plugin = ">=1.0.1,<2"
+pydantic-numpy = ">=8.0.0,<9"
+p4p = ">=4.2.0,<5"
+epicscorelibs = ">=7.0.7.99.1.1,<8"
+tiled-client = ">=0.2.3,<0.3"
+pymatgen = "*"
+"diffpy.pdffit2" = "*"
+"diffpy.structure" = "*"
+blop = ">=1.0.0b1,<2"
+pytest = ">=9.0.3,<10"
+pyfai = ">=2025.3.0,<2026"
+
+
+[feature.profile.pypi-dependencies]
+ophyd-async = { version = ">0.10.0", extras = ["ca", "pva"] }
+"diffpy.pdfgetx" = { path = "/home/xf28id1/Documents/pdfgetx-2.4.0-wheels/diffpy_pdfgetx-2.4.0-cp312-cp312-linux_x86_64.whl" }
+pdfstream = { git = "https://github.com/NSLS-II-PDF/pdfstream.git", rev="v0.5.x" }
+#torch = { version = "*", index = "https://download.pytorch.org/whl/cu124" }
+#torchvision = { version = "*", index = "https://download.pytorch.org/whl/cu124" }
+#bluesky = { git = "https://github.com/bluesky/bluesky.git"}
+
+
+
+[feature.terminal.dependencies]
+ipython = ">=9.5.0"
+pyside6 = "*"
+numpy = ">2"
+
+[feature.terminal.tasks]
+start = "unset SESSION_MANAGER && MPLBACKEND=qtagg ipython --profile-dir=$HOME/.ipython/profile_$BS_PROFILE"
+pvs = "ipython --profile-dir=. -c 'get_pv_types(); exit()'"
+ipython = "ipython"
+pdf_auto = "python /home/xf28id1/src/pdf-auto/plugin_00.py pdf"
+
+[environments]
+terminal = { features = ["profile", "terminal"], solve-group = "profile" }
+
+[dependencies]
+scipy = ">=1.17.1,<2"
+pytest = ">=9.0.3,<10"
+matplotlib = ">=3.10.8,<4"
+pandas = ">=3.0.2,<4"
+
+
+#zmq_info_addr: "ipc:///var/lib/bsqs/bsqs-info.sock"
+
