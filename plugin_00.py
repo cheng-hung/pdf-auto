@@ -2,7 +2,7 @@ import datetime
 import pprint
 import uuid
 # from bluesky_kafka import RemoteDispatcher
-# from bluesky_kafka.consume import BasicConsumer
+from bluesky_kafka.consume import BasicConsumer
 from bluesky.callbacks.zmq import Publisher, RemoteDispatcher
 from event_model import RunRouter
 import matplotlib.pyplot as plt
@@ -27,10 +27,10 @@ ini_config = '/home/xf28id1/src/pdf-auto/pilatus_zmq_config.ini'
 
 "--------------DO NOT TOUCH BELOW!! Unless CHLin said OK!-----------"
 
-# try:
-#     from nslsii import _read_bluesky_kafka_config_file  # nslsii <0.7.0
-# except (ImportError, AttributeError):
-#     from nslsii.kafka_utils import _read_bluesky_kafka_config_file  # nslsii >=0.7.0
+try:
+    from nslsii import _read_bluesky_kafka_config_file  # nslsii <0.7.0
+except (ImportError, AttributeError):
+    from nslsii.kafka_utils import _read_bluesky_kafka_config_file  # nslsii >=0.7.0
 
 # these two lines allow a stale plot to remain interactive and prevent
 # the current plot from stealing focus.  thanks to Tom:
@@ -50,9 +50,11 @@ class plugin0_factory():
         self.factory_log = server_log()
 
     
-    def __call__(self, name:str, doc:dict):
-        
-        message = doc
+    # def __call__(self, name:str, doc:dict):
+    #     message = doc
+    def __call__(self, consumer, doctype, doc):
+        name, message = doc
+
         # print(
         #     f"\n{datetime.datetime.now().isoformat()} document: {name}\n"
         #     f"\ndocument keys: {list(message.keys())}\n"
@@ -133,47 +135,47 @@ class plugin0_factory():
             tiff3_tuner = plotter.plot_tiff3(self.img_analyzer.process_img, self.img_analyzer.mask_array, use_mask=False, histogram=True)
             tiff3_tuner()
 
-            # ## pyFai integration: 2D to 1Dcolor_str
-            # print(f"\nStart to do 2D integration: uid = {self.img_analyzer.uid}\n")
-            # iq_df, iq_fn, unrolled_array = self.img_analyzer.pct_integration()
-            # # img_tuner4 = plotter.plot_tiff4(unrolled_array, iq_df.iloc[:,0])
+            ## pyFai integration: 2D to 1Dcolor_str
+            print(f"\nStart to do 2D integration: uid = {self.img_analyzer.uid}\n")
+            iq_df, iq_fn, unrolled_array = self.img_analyzer.pct_integration()
+            # img_tuner4 = plotter.plot_tiff4(unrolled_array, iq_df.iloc[:,0])
             
-            # ## Plot masked 2D image rings with iq data
-            # maskImg_iq_tuner = plotter.plot_maskImg_iq(self.img_analyzer.process_img,  
-            #                                             self.img_analyzer.mask_array, 
-            #                                             unrolled_array, 
-            #                                             iq_fn,
-            #                                             poni_name, 
-            #                                             binning=2, 
-            #                                             )
-            # maskImg_iq_tuner()
+            ## Plot masked 2D image rings with iq data
+            maskImg_iq_tuner = plotter.plot_maskImg_iq(self.img_analyzer.process_img,  
+                                                        self.img_analyzer.mask_array, 
+                                                        unrolled_array, 
+                                                        iq_fn,
+                                                        poni_name, 
+                                                        binning=2, 
+                                                        )
+            maskImg_iq_tuner()
 
-            # ## Plot masked and unrolled image cake
-            # # tiff4_tuner4 = plotter.plot_tiff4(unrolled_array, None, binned=True)
-            # # tiff4_tuner4()
+            ## Plot masked and unrolled image cake
+            # tiff4_tuner4 = plotter.plot_tiff4(unrolled_array, None, binned=True)
+            # tiff4_tuner4()
 
-            # ## Data reduction: I(Q) to G(r)
-            # if (self.img_analyzer.do_reduction) and (self.img_analyzer.acq_mode=='PDF'):
-            # # if img_analyzer.acq_mode=='PDF':
-            #     print(f"\nStart to reduce sq, fq, gr: uid = {self.img_analyzer.uid}\n")
-            #     # iq_array = iq_df.to_numpy().T
-            #     sqfqgr_path = self.img_analyzer.get_gr(iq_df)
-            #     bkg_scale = self.img_analyzer.pdfconfig().bgscale[0]
-            #     bkg_fn = self.img_analyzer.pdfconfig_dict['backgroundfile']
-            #     plotter.plot_sqfqgr(sqfqgr_path, bkg_scale, bkg_fn)
+            ## Data reduction: I(Q) to G(r)
+            if (self.img_analyzer.do_reduction) and (self.img_analyzer.acq_mode=='PDF'):
+            # if img_analyzer.acq_mode=='PDF':
+                print(f"\nStart to reduce sq, fq, gr: uid = {self.img_analyzer.uid}\n")
+                # iq_array = iq_df.to_numpy().T
+                sqfqgr_path = self.img_analyzer.get_gr(iq_df)
+                bkg_scale = self.img_analyzer.pdfconfig().bgscale[0]
+                bkg_fn = self.img_analyzer.pdfconfig_dict['backgroundfile']
+                plotter.plot_sqfqgr(sqfqgr_path, bkg_scale, bkg_fn)
             
-            # else:
-            #     print('This is an XRD scan. Skip gr transformation.')
+            else:
+                print('This is an XRD scan. Skip gr transformation.')
 
 
-            # self.factory_log.colo_str = plotter.color_str
+            self.factory_log.colo_str = plotter.color_str
             
-            # # a reminder to finish data processing
-            # self.factory_log.do_process = False
-            # print(f'\n{self.factory_log.do_process = }\n')
+            # a reminder to finish data processing
+            self.factory_log.do_process = False
+            print(f'\n{self.factory_log.do_process = }\n')
             print('\n########### Events printing division ############\n')
 
-        return [], []
+        # return [], []
 
 
 
@@ -201,12 +203,12 @@ def plug0_server(beamline_acronym, ini_config=ini_config,):
             f"\ncontents: {pprint.pformat(message)}\n"
         )
 
-        fig, ax = plt.subplots()
-        x = np.arange(-10, 10, 0.1)
-        y = np.sin(x)
-        ax.plot(x,y)
-        fig.canvas.manager.show()
-        fig.canvas.flush_events()
+        # fig, ax = plt.subplots()
+        # x = np.arange(-10, 10, 0.1)
+        # y = np.sin(x)
+        # ax.plot(x,y)
+        # fig.canvas.manager.show()
+        # fig.canvas.flush_events()
     
     rd = RemoteDispatcher("ipc:///var/lib/bluesky-zmq-proxy/pdf-ipc-in-ipc-out/out.sock")
     install_qt_kicker(rd.loop)
@@ -215,7 +217,45 @@ def plug0_server(beamline_acronym, ini_config=ini_config,):
     rd.start()
 
 
+def plug0_kafka(beamline_acronym, ini_config=ini_config,):
+
+    factory = plugin0_factory(beamline_acronym, ini_config)
+
+    # def print_message(consumer, doctype, doc):
+    #     name, message = doc
+    #     print(
+    #         f"\n{datetime.datetime.now().isoformat()} document: {name}\n"
+    #         f"\ndocument keys: {list(message.keys())}\n"
+    #         f"\ncontents: {pprint.pformat(message)}\n"
+    #     )
+
+
+    kafka_config = _read_bluesky_kafka_config_file(config_file_path="/etc/bluesky/kafka.yml")
+
+    # this consumer should not be in a group with other consumers
+    #   so generate a unique consumer group id for it
+    unique_group_id = f"echo-{beamline_acronym}-{str(uuid.uuid4())[:8]}"
+
+    kafka_consumer = BasicConsumer(
+        topics=[f"{beamline_acronym}.bluesky.runengine.documents", 
+                # f"{beamline_acronym_02}.bluesky.runengine.documents", 
+                ],
+        bootstrap_servers=kafka_config["bootstrap_servers"],
+        group_id=unique_group_id,
+        consumer_config=kafka_config["runengine_producer_config"],
+        process_message = factory,
+    )
+
+    print('\n\n Subscribe to Kafka Consumer and start the server \n\n')
+
+    try:
+        kafka_consumer.start_polling(work_during_wait=lambda : plt.pause(.1))
+    except KeyboardInterrupt:
+        print('\nExiting Kafka consumer')
+        return()
+
 if __name__ == "__main__":
     import sys
     # print_kafka_messages(sys.argv[1], sys.argv[2])
-    plug0_server(sys.argv[1])
+    # plug0_server(sys.argv[1])
+    plug0_kafka(sys.argv[1])

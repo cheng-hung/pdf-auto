@@ -648,8 +648,8 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/pydantic-settings-2.11.0-pyh3cfb1c2_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/pyepics-3.5.9-py312h7900ff3_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/pyerfa-2.0.1.5-py310h32771cd_2.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/pyfai-2025.12.1-hd8ed1ab_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/pyfai-base-2025.12.1-py312hf79963d_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/pyfai-2025.3.0-hd8ed1ab_2.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/pyfai-base-2025.3.0-py312hf79963d_2.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pygments-2.20.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/pymatgen-2026.5.4-py312h4f23490_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/pymatgen-core-2026.4.16-py312h5253ce2_1.conda
@@ -8303,22 +8303,22 @@ packages:
   - pkg:pypi/pyerfa?source=hash-mapping
   size: 295617
   timestamp: 1756821497270
-- conda: https://conda.anaconda.org/conda-forge/noarch/pyfai-2025.12.1-hd8ed1ab_0.conda
-  sha256: 37031ed7b8dbeca491f4d5cfb30df61ee451ebc019ae96a08764b01a63cce369
-  md5: 1d34187bbcef4196b49c8a586fc58d40
+- conda: https://conda.anaconda.org/conda-forge/noarch/pyfai-2025.3.0-hd8ed1ab_2.conda
+  sha256: a0fcc7e0aed1993d181022095ecc6f11de4537cad0a032e4db32cf2f4fd72d7e
+  md5: fcf437b3f7f1b43647cf95ef5450e63c
   depends:
   - hdf5plugin
   - matplotlib
-  - pyfai-base >=2025.12.1,<2025.12.2.0a0
+  - pyfai-base >=2025.3.0,<2025.3.1.0a0
   - silx >=1.1
   license: MIT
   license_family: MIT
   purls: []
-  size: 9606
-  timestamp: 1766136447081
-- conda: https://conda.anaconda.org/conda-forge/linux-64/pyfai-base-2025.12.1-py312hf79963d_0.conda
-  sha256: 23f5c724e5376224da40b6c795c8f3a4fb3753ac45721350b806de7006b708e0
-  md5: e83d09127ca04958fc1d171f9f77e37c
+  size: 9555
+  timestamp: 1759574167736
+- conda: https://conda.anaconda.org/conda-forge/linux-64/pyfai-base-2025.3.0-py312hf79963d_2.conda
+  sha256: d95821906d617471fb1b58bf414e750880eb6276f5d9e924bb6fc21d42b99902
+  md5: 4fb50998bcdad41eae7e1f717336248b
   depends:
   - __glibc >=2.17,<3.0.a0
   - fabio
@@ -8336,8 +8336,8 @@ packages:
   license_family: MIT
   purls:
   - pkg:pypi/pyfai?source=hash-mapping
-  size: 4542756
-  timestamp: 1766136547055
+  size: 4399406
+  timestamp: 1759574202799
 - conda: https://conda.anaconda.org/conda-forge/noarch/pygments-2.20.0-pyhd8ed1ab_0.conda
   sha256: cf70b2f5ad9ae472b71235e5c8a736c9316df3705746de419b59d442e8348e86
   md5: 16c18772b340887160c79a6acc022db0

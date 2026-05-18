@@ -433,7 +433,7 @@ class imgData_2D(imgData_config):
         tifffile.imwrite(tiff_fn, self.process_img)
         print(f'\n*** {os.path.basename(tiff_fn)} saved!! ***\n')
 
-        return self.process_img
+        # return self.process_img
 
 
     
