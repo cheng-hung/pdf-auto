@@ -37,7 +37,7 @@ class plot_tuner_base():
         
         ## Create the RangeSlider
         self.fig.subplots_adjust(bottom=0.1)
-        self.slider_ax = plt.axes([0.15, 0.01, 0.65, 0.03])
+        self.slider_ax = self.fig.add_axes([0.15, 0.01, 0.65, 0.03])
         self.slider = RangeSlider(self.slider_ax, "color_scale", self.slider_min, self.slider_max)
 
 
@@ -64,7 +64,7 @@ class plot_tuner_base():
     ## Re-add the RangeSlider
     def readd_slider(self):
         self.slider_ax.remove()
-        self.slider_ax = plt.axes([0.15, 0.01, 0.65, 0.03])
+        self.slider_ax = self.fig.add_axes([0.15, 0.01, 0.65, 0.03])
         self.slider = RangeSlider(self.slider_ax, "color_scale", self.slider_min, self.slider_max)
 
 
@@ -389,7 +389,7 @@ class TwoSub_tuner(plot_tuner_base):
             ## Add slider
             self.q_binned = bin_ndarray(self.data[0], new_shape=(self.img.shape[1],))
             self.fig.subplots_adjust(bottom=0.15)
-            self.slider_ax_ = plt.axes([0.15, 0.05, 0.65, 0.03])
+            self.slider_ax_ = self.fig.add_axes([0.15, 0.05, 0.65, 0.03])
             self.slider_iq = Slider(self.slider_ax_, "q_range", self.q_binned[0]-1, self.q_binned[-1]+1)
 
             ## Add vertical line in data
@@ -562,7 +562,7 @@ class ThreeSub_tuner(plot_tuner_base):
             ## Add slider
             self.q_binned = bin_ndarray(self.data[0], new_shape=(self.unrolled_array.shape[1],))
             self.fig.subplots_adjust(bottom=0.15)
-            self.slider_ax_ = plt.axes([0.15, 0.05, 0.65, 0.03])
+            self.slider_ax_ = self.fig.add_axes([0.15, 0.05, 0.65, 0.03])
             self.slider_iq = Slider(self.slider_ax_, "q_range", self.q_binned[0]-1, self.q_binned[-1]+1)
 
             # gs.set_width_ratios([2., 1.])

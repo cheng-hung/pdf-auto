@@ -51,7 +51,8 @@ class img_plotter(open_figures):
         except (IndexError, KeyError): 
             f = plt.figure(self.fig[-1])
 
-        plt.clf()
+        f.clear()
+        # plt.clf()
 
         if type(mask) is str:
             mask_array = np.load(mask)
@@ -93,7 +94,8 @@ class img_plotter(open_figures):
         
         iq_df = pd.read_csv(iq_fn, names=['q', 'I(q)'], sep=' ', skiprows=get_HeaderRows(iq_fn))
 
-        plt.clf()
+        f.clear()
+        # plt.clf()
 
         if type(mask) is str:
             mask_array = np.load(mask)
