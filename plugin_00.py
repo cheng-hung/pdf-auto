@@ -165,6 +165,7 @@ class plugin0_factory():
                 plotter.plot_sqfqgr(sqfqgr_path, bkg_scale, bkg_fn)
             
             else:
+                plotter.clear_sqfqgr()
                 print('This is an XRD scan. Skip gr transformation.')
 
 

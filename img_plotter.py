@@ -13,9 +13,10 @@ bin_ndarray = importlib.import_module("utility").bin_ndarray
 # Pilatus_getpdf = importlib.import_module("pilatus_getpdf_v2.2").Pilatus_Int
 
 class open_figures():
-    def __init__(self, figure_labels):
-        for i in figure_labels:
-            plt.figure(num=i, figsize=(8,6))
+    def __init__(self, figure_labels:list|str):
+        self.fig_dict = {}
+        for name in figure_labels:
+            self.fig_dict[name] = plt.figure(num=name, figsize=(8,6))
         plt.ion()
 
 
@@ -44,13 +45,13 @@ class img_plotter(open_figures):
         plt.ion()
         
         try:
-            f = plt.figure(self.fig[0])
-            # f = plt.figure('test')
-        except (IndexError): 
+            # f = plt.figure(self.fig[0])
+            # f = plt.figure('tiff & Histogram')
+            f = self.fig_dict['tiff & Histogram']
+        except (IndexError, KeyError): 
             f = plt.figure(self.fig[-1])
 
         plt.clf()
-        ax = f.gca()
 
         if type(mask) is str:
             mask_array = np.load(mask)
@@ -85,8 +86,9 @@ class img_plotter(open_figures):
         plt.ion()
         
         try: 
-            f = plt.figure(self.fig[1])
-        except (IndexError): 
+            # f = plt.figure(self.fig[1])
+            f = self.fig_dict['I(Q)']
+        except (IndexError, KeyError): 
             f = plt.figure(self.fig[-1])
         
         iq_df = pd.read_csv(iq_fn, names=['q', 'I(q)'], sep=' ', skiprows=get_HeaderRows(iq_fn))
@@ -140,20 +142,20 @@ class img_plotter(open_figures):
     def plot_sqfqgr(self, sqfqgr_path, bkg_scale, bkg_fn, title=None):
         plt.ion()
 
-        try: 
-            f = plt.figure(self.fig[1])
-        except (IndexError): 
-            f = plt.figure(self.fig[-1])
+        # try: 
+        #     f = plt.figure(self.fig[1])
+        # except (IndexError): 
+        #     f = plt.figure(self.fig[-1])
 
-        bkg_exist = os.path.exists(bkg_fn)
-        if bkg_exist:
-            rows = get_HeaderRows(bkg_fn, sep=' ', num_data_column=2, 
-                        check_range=100, check_float=True)
-            bkg_df = pd.read_csv(bkg_fn, names=['x', 'y'], sep=' ', skiprows=rows)
+        # bkg_exist = os.path.exists(bkg_fn)
+        # if bkg_exist:
+        #     rows = get_HeaderRows(bkg_fn, sep=' ', num_data_column=2, 
+        #                 check_range=100, check_float=True)
+        #     bkg_df = pd.read_csv(bkg_fn, names=['x', 'y'], sep=' ', skiprows=rows)
             
-            ax = f.gca()
-            ax.plot(bkg_df['x'], bkg_df['y']*bkg_scale, label='background', marker='.', color='green')
-            ax.legend(prop=self.legend_prop)
+        #     ax = f.gca()
+        #     ax.plot(bkg_df['x'], bkg_df['y']*bkg_scale, label='background', marker='.', color='green')
+        #     ax.legend(prop=self.legend_prop)
         
         keys = ['sq', 'fq', 'gr']
         xlabel = ['q (A-1)', 'q (A-1)', 'r (A)']
@@ -162,8 +164,9 @@ class img_plotter(open_figures):
         for i in range(len(sqfqgr_path)):
 
             try: 
-                f = plt.figure(self.fig[i+2])
-            except (IndexError): 
+                # f = plt.figure(self.fig[i+2])
+                f = self.fig_dict[self.fig[i+2]]
+            except (IndexError, KeyError): 
                 f = plt.figure(self.fig[-1])
         
             rows = get_HeaderRows(sqfqgr_path[keys[i]], sep=' ', num_data_column=2, 
@@ -172,9 +175,8 @@ class img_plotter(open_figures):
             # df = pd.read_csv(sqfqgr_path[keys[i]], names=['x', 'y'], sep=' ', skiprows=27)
             df = pd.read_csv(sqfqgr_path[keys[i]], names=['x', 'y'], sep=' ', skiprows=rows)
 
-
-            plt.clf()
             ax = f.gca()
+            ax.clear()
 
             for spine in ax.spines.values():
                 spine.set_linewidth(self.spine_width)
@@ -193,7 +195,22 @@ class img_plotter(open_figures):
             f.canvas.manager.show()
             f.canvas.flush_events()
             # f.canvas.draw_idle()
-        
+
+
+
+    def clear_sqfqgr(self):
+
+        for i in range(len(self.fig[2:])):
+
+            try: 
+                # f = plt.figure(self.fig[i+2])
+                f = self.fig_dict[self.fig[i+2]]
+            except (IndexError, KeyError): 
+                f = plt.figure(self.fig[-1])
+
+            ax = f.gca()
+            ax.clear()
+
 
 
     # def plot_tiff(self, img, title=None):
