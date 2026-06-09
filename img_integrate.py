@@ -8,13 +8,13 @@ import importlib
 imgData_2D = importlib.import_module("imgData_2D")
 
 
-def iq_saver(fn, df, md, header=['q_A^-1', 'I(q)']):
+def iq_saver(fn, df, md, header=['#q_A^-1', 'I(q)']):
     
     with open(fn, mode='w', encoding='utf-8') as f:
-        f.write('pyFai_poni_information_28ID1_NSLS2_BNL\n')
+        f.write('# pyFai_poni_information_28ID1_NSLS2_BNL\n')
         num_row = 1
         for key, value in md.items():
-            f.write(f'{key} {value}\n')
+            f.write(f'# {key} {value}\n')
             num_row += 1
     
     ## Now append the dataframe
@@ -316,7 +316,9 @@ class img_integrate(imgData_2D.imgData_2D):
                'percentile_low_limit': self.ll, 
                'percentile_up_limit': self.ul, 
                self.T_controller: f'{self.temperature} {self.T_unit}', 
-        }
+               'Temp (K) = ': f'{self.temperature}', 
+               }
+        
         md.update(_md)
 
         if type(self.temperature) is float:
@@ -330,7 +332,7 @@ class img_integrate(imgData_2D.imgData_2D):
 
         ## num_row will be the number of rows of the header in saved iq data file
         self.num_rows_header = iq_saver(iq_fn, iq_df, md)
-        iq_saver(tth_fn, iq_df10, md, header=['tth', 'I(q)'])
+        iq_saver(tth_fn, iq_df10, md, header=['#tth', 'I(q)'])
         print(f'\n*** {os.path.basename(iq_fn)} saved!! ***\n')
         print(f'\n*** {os.path.basename(tth_fn)} saved!! ***\n')
 

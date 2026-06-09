@@ -192,7 +192,7 @@ class imgData_2D(imgData_config):
     def temperature(self):
         try:
             # temp_controller = self.get('TEMPERATURE', 'temp_controller', fallback='No_temp_controller')
-            T = float(self.run.start['more_info'][self.T_controller])
+            T = float(self.run.start[self.T_controller])
 
         except (KeyError, IndexError, TypeError):
             T = 'None'
@@ -216,7 +216,7 @@ class imgData_2D(imgData_config):
         T = self.temperature
 
         if type(T) is float:
-            return f'{self.sample_name}_{self.readable_time}_{self.full_uid:6.6}_{T:.0f}_{self.T_unit}'
+            return f'{self.sample_name}_{self.readable_time}_{self.full_uid:6.6}_{T:.0f}{self.T_unit}'
 
         else:
             return f'{self.sample_name}_{self.readable_time}_{self.full_uid:6.6}'
@@ -324,18 +324,21 @@ class imgData_2D(imgData_config):
 
         user_mask = np.zeros([x_size, y_size, self.num_positions])
 
+        pos_x = []
+        pos_y = []
         ## Read image data, motor positions, and masks into np arrays
         for i in range(self.num_positions):
             ## Read detector motor positions into pos_x, pos_y
-            x = self.run[self.stream_name[i]].read()[self.detector_Xmotor[0]].to_numpy()[0]
-            y = self.run[self.stream_name[i]].read()[self.detector_Ymotor[1]].to_numpy()[0]
+            x = self.run[self.stream_name[i]].read()[self.detector_Xmotor].to_numpy()[0]
+            y = self.run[self.stream_name[i]].read()[self.detector_Ymotor].to_numpy()[0]
             
             ## Image xy and motor xy are reversed since python is row first which in image is y.
             pos_x.append(float(y))
             pos_y.append(float(x))
             
             ## Read different position images into zeros array
-            img =  np.float32(self.run[self.stream_name[i]].read()[self.img_key].to_numpy()[0][0])
+            img = np.float64(self.run[self.stream_name[i]].read()[self.img_key].to_numpy()[0][0])
+            # img = self.run[self.stream_name[i]].read()[self.img_key].to_numpy()[0][0]
             my_im[:,:,i] = img
             
             ## Apply flat field if True
