@@ -317,6 +317,8 @@ class img_integrate(imgData_2D.imgData_2D):
                'percentile_up_limit': self.ul, 
                self.T_controller: f'{self.temperature} {self.T_unit}', 
                'Temp (K) = ': f'{self.temperature}', 
+               'sample_name': self.sample_name, 
+               'composition': self.run.start['composition_string'], 
                }
         
         md.update(_md)

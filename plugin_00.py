@@ -46,7 +46,7 @@ class plugin0_factory():
         # self.tiled_client = from_uri('https://tiled.nsls2.bnl.gov')[beamline_acronym]["migration"]
         self.tiled_client = from_profile(beamline_acronym)
         self.ini_config = ini_config
-        self.img_analyzer = None
+        self.img_analyzer = None 
         self.factory_log = server_log()
 
     
