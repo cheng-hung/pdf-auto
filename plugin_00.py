@@ -250,7 +250,7 @@ def plug0_kafka(beamline_acronym, ini_config=ini_config,):
     print('\n\n Subscribe to Kafka Consumer and start the server \n\n')
 
     try:
-        kafka_consumer.start_polling(work_during_wait=lambda : plt.pause(.1))
+        kafka_consumer.start_polling(work_during_wait=lambda : plt.pause(.01))
     except KeyboardInterrupt:
         print('\nExiting Kafka consumer')
         return()

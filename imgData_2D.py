@@ -428,7 +428,8 @@ class imgData_2D(imgData_config):
     def save_processed_img(self):
 
         if self.stream_length==self.num_positions:
-            self.process_img = self.sum_pilatus2()
+            # self.process_img = self.sum_pilatus2()
+            self.process_img = np.nan_to_num(self.sum_pilatus2())
 
         else:
             if 'pe' in self.detector:

@@ -305,7 +305,7 @@ class img_integrate(imgData_2D.imgData_2D):
         iq_df1['I'] = i1d
         # iq_df = iq_df0.dropna()
         iq_df10 = iq_df1.fillna(0)
-        
+
         # md = self.ai.getPyFAI()
         md = self.ai.get_config()
         _md = {'detector': self.run.start['detectors'][0], 
@@ -316,7 +316,7 @@ class img_integrate(imgData_2D.imgData_2D):
                'percentile_low_limit': self.ll, 
                'percentile_up_limit': self.ul, 
                self.T_controller: f'{self.temperature} {self.T_unit}', 
-               'Temp (K) = ': f'{self.temperature}', 
+               f'Temp ({self.T_unit}) = ': f'{self.temperature}', 
                'sample_name': self.sample_name, 
                'composition': self.run.start['composition_string'], 
                }
@@ -324,7 +324,13 @@ class img_integrate(imgData_2D.imgData_2D):
         md.update(_md)
 
         if type(self.temperature) is float:
-            md.update({'temperature': f'{self.temperature:.2f} K'})
+            md.update({'temperature': f'{self.temperature:.2f} {self.T_unit}'})
+        else:
+            md.update({'temperature': 'None'})
+
+        if 'flow_cell_thermocouple' in self.run.start:
+            flow_cell_thermocouple = float(self.run.start['flow_cell_thermocouple'])
+            md.update({'flow_cell_thermocouple': f'{flow_cell_thermocouple:.2f} C'})
 
         iq_fn = self.output_data_path(sub_name='iq', file_type='iq')
         tth_fn = self.output_data_path(sub_name='tth', file_type='xy')
