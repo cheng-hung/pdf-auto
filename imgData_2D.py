@@ -69,7 +69,7 @@ class imgData_2D(imgData_config):
     @property
     def img_key(self):
         data_keys = list(self.run[self.stream_name[0]].read().keys())
-        k = [key for key in data_keys if 'image' in key][0]
+        k = [key for key in data_keys if 'image' in key or key=='lambda1'][0]
         return k
         # return f'{self.detector}_image'
 
@@ -337,7 +337,12 @@ class imgData_2D(imgData_config):
             pos_y.append(float(x))
             
             ## Read different position images into zeros array
-            img = np.float64(self.run[self.stream_name[i]].read()[self.img_key].to_numpy()[0][0])
+            if 'lambda' in self.img_key:
+                img = np.float64(self.run[self.stream_name[i]][self.img_key].read()[0])
+
+            else:
+                img = np.float64(self.run[self.stream_name[i]].read()[self.img_key].to_numpy()[0][0])
+            
             # img = self.run[self.stream_name[i]].read()[self.img_key].to_numpy()[0][0]
             my_im[:,:,i] = img
             
@@ -423,14 +428,18 @@ class imgData_2D(imgData_config):
     def save_processed_img(self):
 
         if self.stream_length==self.num_positions:
-            self.process_img = self.sum_pilatus2()
+            # self.process_img = self.sum_pilatus2()
+            self.process_img = np.nan_to_num(self.sum_pilatus2())
 
         else:
             if 'pe' in self.detector:
                 self.process_img = self.sub_dk_img()
 
             else:
-                self.process_img = np.float32(getattr(self.run, self.stream_name[0]).read()[self.img_key].to_numpy()[0][0])
+                if 'lambda' in self.img_key:
+                    self.process_img = np.float32(getattr(self.run, self.stream_name[0]).read()[self.img_key].to_numpy()[0])
+                else:
+                    self.process_img = np.float32(getattr(self.run, self.stream_name[0]).read()[self.img_key].to_numpy()[0][0])
         
         tiff_fn = self.output_data_path(sub_name='img', file_type='tiff')
         tifffile.imwrite(tiff_fn, self.process_img)
