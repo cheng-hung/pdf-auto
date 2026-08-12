@@ -8,10 +8,45 @@ def test_pixi_task_launches_package_directly() -> None:
     with (REPOSITORY_ROOT / "pixi.toml").open("rb") as stream:
         pixi_config = tomllib.load(stream)
 
-    task = pixi_config["feature"]["terminal"]["tasks"]["pdf_auto"]
+    task = pixi_config["tasks"]["pdf_auto"]
 
     assert task["cmd"] == "python -m pdf_auto pdf"
     assert task["env"]["PYTHONPATH"].endswith("/pdf-auto/src")
+    assert task["env"]["MPLBACKEND"] == "qtagg"
+
+
+def test_pixi_uses_one_default_environment() -> None:
+    with (REPOSITORY_ROOT / "pixi.toml").open("rb") as stream:
+        pixi_config = tomllib.load(stream)
+
+    assert "feature" not in pixi_config
+    assert "environments" not in pixi_config
+
+
+def test_pixi_declares_active_runtime_dependencies() -> None:
+    with (REPOSITORY_ROOT / "pixi.toml").open("rb") as stream:
+        pixi_config = tomllib.load(stream)
+
+    dependencies = set(pixi_config["dependencies"])
+    assert {
+        "bluesky-base",
+        "bluesky-kafka",
+        "event-model",
+        "matplotlib-base",
+        "nslsii",
+        "numpy",
+        "pandas",
+        "pyside6",
+        "pyfai",
+        "python",
+        "scipy",
+        "tifffile",
+        "tiled-client",
+    } <= dependencies
+
+    assert "bluesky-queueserver" not in dependencies
+    assert "ophyd" not in dependencies
+    assert "pymatgen" not in dependencies
 
 
 def test_default_ini_file_exists() -> None:

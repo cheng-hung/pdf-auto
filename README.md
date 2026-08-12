@@ -56,8 +56,7 @@ sharing work with another consumer instance.
 
 ## Beamline environment
 
-The environment is defined in [`pixi.toml`](pixi.toml) and locked by
-[`pixi.lock`](pixi.lock). It currently targets:
+The environment is defined in [`pixi.toml`](pixi.toml). It currently targets:
 
 - Linux x86-64 (`linux-64`);
 - Python 3.12;
@@ -82,8 +81,13 @@ The workflow also expects:
 On the beamline workstation, from this repository:
 
 ```bash
-pixi install -e terminal
+pixi install
 ```
+
+The first installation on the beamline workstation will generate a new
+`pixi.lock` for this reduced environment. Commit that generated lock file after
+the workflow has been validated there; the previous lock described the removed
+multi-environment profile and is intentionally not retained.
 
 ## Starting the active server
 
@@ -93,12 +97,12 @@ After installation, start the server with the `pdf_auto` Pixi task:
 pixi run pdf_auto
 ```
 
-The `pdf_auto` task belongs only to the `terminal` environment, so Pixi selects
-that environment automatically when the task name is used. The task runs the
-package with the beamline source directory on `PYTHONPATH`, equivalent to:
+The repository has one default Pixi environment. The task runs the package with
+the beamline source directory on `PYTHONPATH` and selects the Qt Matplotlib
+backend, equivalent to:
 
 ```bash
-PYTHONPATH=/home/xf28id1/src/pdf-auto/src python -m pdf_auto pdf
+PYTHONPATH=/home/xf28id1/src/pdf-auto/src MPLBACKEND=qtagg python -m pdf_auto pdf
 ```
 
 Here, `pdf` is both the beamline acronym used to construct the Kafka topic and

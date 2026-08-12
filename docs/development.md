@@ -1,7 +1,8 @@
 # Development
 
-Use Python 3.12. The beamline deployment remains defined by `pixi.toml`; the
-standard package and developer-tool configuration is in `pyproject.toml`.
+Use Python 3.12. The single beamline runtime environment is defined by
+`pixi.toml`; standard package and developer-tool configuration is in
+`pyproject.toml`.
 
 Run the offline checks with:
 
