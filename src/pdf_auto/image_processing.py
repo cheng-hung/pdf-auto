@@ -4,6 +4,8 @@ from configparser import ConfigParser
 import numpy as np
 import tifffile
 
+from .routing import should_process_start
+
 
 def _readable_time(unix_time):
     from datetime import datetime
@@ -460,12 +462,7 @@ class ImageData2D(ImageDataConfig):
 
     def is_processable_start(self, doc: dict):
         """Return whether a start document represents a non-dark run."""
-        message = doc
-        if "dark" in message["sp_plan_name"]:
-            print("\n***** This is a DARK scan skip process data. *****\n")
-            return False
-        else:
-            return True
+        return should_process_start(doc)
 
     # Backward-compatible method names used by earlier beamline scripts.
     sum_pilatus2 = stitch_images

@@ -12,7 +12,7 @@ from tiled.client import from_profile
 
 from . import plotting, reduction
 from .config import DEFAULT_CONFIG_PATH
-from .routing import should_process_start
+from .routing import is_dark_start, should_process_start
 from .utilities import ServerState
 
 "--------------------------USER INPUTS------------------------------"
@@ -55,7 +55,7 @@ class ProcessingFactory:
         # )
 
         start_process = should_process_start(message)
-        if "dark" in message.get("sp_plan_name", ""):
+        if is_dark_start(message):
             print("\n***** This is a DARK scan skip process data. *****\n")
         elif "original_run_uid" in message:
             print(
