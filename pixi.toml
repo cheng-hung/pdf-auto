@@ -57,7 +57,7 @@ numpy = ">2"
 start = "unset SESSION_MANAGER && MPLBACKEND=qtagg ipython --profile-dir=$HOME/.ipython/profile_$BS_PROFILE"
 pvs = "ipython --profile-dir=. -c 'get_pv_types(); exit()'"
 ipython = "ipython"
-pdf_auto = "python /home/xf28id1/src/pdf-auto/plugin_00.py pdf"
+pdf_auto = { cmd = "python -m pdf_auto pdf", env = { PYTHONPATH = "/home/xf28id1/src/pdf-auto/src" } }
 
 [environments]
 terminal = { features = ["profile", "terminal"], solve-group = "profile" }
@@ -70,4 +70,3 @@ pandas = ">=3.0.2,<4"
 
 
 #zmq_info_addr: "ipc:///var/lib/bsqs/bsqs-info.sock"
-

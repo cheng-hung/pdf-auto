@@ -9,6 +9,7 @@ def test_cli_uses_beamline_deployment_config_by_default() -> None:
 
     assert args.beamline == "pdf"
     assert args.config == DEFAULT_CONFIG_PATH
+    assert args.config.name == "pdf_auto_config.ini"
 
 
 def test_cli_accepts_config_override() -> None:

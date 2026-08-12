@@ -16,8 +16,8 @@ pyFAI, PDFstream, or the local PDFgetX wheel.
 6. `reduction.py` converts integrated PDF data through PDFstream/PDFgetX.
 7. `plotting.py` and `plot_widgets.py` manage interactive visualization.
 
-`plugin_00.py` remains a compatibility wrapper because the deployed Pixi task
-invokes that absolute workstation path. It delegates to `pdf_auto.cli`.
+The active Pixi task launches `python -m pdf_auto` directly. The previous
+`plugin_00.py` wrapper is retained under `legacy_servers/` for reference only.
 
 ## Compatibility policy
 

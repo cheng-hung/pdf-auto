@@ -2,4 +2,4 @@
 
 from pathlib import Path
 
-DEFAULT_CONFIG_PATH = Path("/home/xf28id1/src/pdf-auto/pilatus_zmq_config.ini")
+DEFAULT_CONFIG_PATH = Path("/home/xf28id1/src/pdf-auto/pdf_auto_config.ini")

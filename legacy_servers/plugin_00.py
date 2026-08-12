@@ -1,7 +1,7 @@
-"""Compatibility entry point for the beamline workstation.
+"""Legacy compatibility entry point for the beamline workstation.
 
-The implementation now lives in :mod:`pdf_auto`. This wrapper preserves the
-existing command configured in ``pixi.toml``.
+The active Pixi task now launches :mod:`pdf_auto` directly. This wrapper is
+retained only as a reference for the earlier workstation command.
 """
 
 from __future__ import annotations
@@ -13,7 +13,7 @@ try:
     from pdf_auto.cli import main
 except ModuleNotFoundError:
     # Keep direct execution working before the local project is installed.
-    sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
     from pdf_auto.cli import main
 
 

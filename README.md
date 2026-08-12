@@ -77,19 +77,28 @@ The workflow also expects:
 - detector masks and PONI calibration files; and
 - a graphical session for the Qt/Matplotlib displays.
 
-## Starting the active server
+## Installation
 
 On the beamline workstation, from this repository:
 
 ```bash
 pixi install -e terminal
-pixi run -e terminal pdf_auto
 ```
 
-The `pdf_auto` Pixi task runs the equivalent of:
+## Starting the active server
+
+After installation, start the server with the `pdf_auto` Pixi task:
 
 ```bash
-python /home/xf28id1/src/pdf-auto/plugin_00.py pdf
+pixi run pdf_auto
+```
+
+The `pdf_auto` task belongs only to the `terminal` environment, so Pixi selects
+that environment automatically when the task name is used. The task runs the
+package with the beamline source directory on `PYTHONPATH`, equivalent to:
+
+```bash
+PYTHONPATH=/home/xf28id1/src/pdf-auto/src python -m pdf_auto pdf
 ```
 
 Here, `pdf` is both the beamline acronym used to construct the Kafka topic and
@@ -118,7 +127,7 @@ different deployment without changing the beamline default.
 ## Configuration
 
 Runtime behavior is controlled by
-[`pilatus_zmq_config.ini`](pilatus_zmq_config.ini). Its existing filesystem paths
+[`pdf_auto_config.ini`](pdf_auto_config.ini). Its existing filesystem paths
 are beamline deployment paths and should not be replaced with generic examples.
 
 ### `[topics]`
@@ -244,7 +253,6 @@ headers.
 
 | File | Responsibility |
 |---|---|
-| [`plugin_00.py`](plugin_00.py) | Compatibility entry point used by the beamline Pixi task |
 | [`cli.py`](src/pdf_auto/cli.py) | Command-line parsing and server startup |
 | [`consumer.py`](src/pdf_auto/consumer.py) | Active Kafka event routing and processing orchestration |
 | [`routing.py`](src/pdf_auto/routing.py) | Service-independent decisions about which start documents to process |
@@ -256,6 +264,7 @@ headers.
 | [`utilities.py`](src/pdf_auto/utilities.py) | Shared parsing, array, plotting, logging, and background helpers |
 | [`callbacks.py`](legacy_servers/callbacks.py) | Experimental/unused callback code retained for development reference |
 | [`zmq_server.py`](legacy_servers/zmq_server.py) | Alternative server implementation; currently not working |
+| [`plugin_00.py`](legacy_servers/plugin_00.py) | Legacy compatibility wrapper; no longer used by the Pixi task |
 
 The `legacy_replay_tools/` directory contains replay utilities and calibration
 assets from older server-testing workflows. It is retained for reference and
@@ -280,6 +289,22 @@ ruff format --check .
 Tests marked `beamline` require the NSLS-II services, calibration assets, and
 local PDFgetX wheel. The default test suite is offline and does not require those
 resources.
+
+### Repository support files
+
+Two root-level files come from the Scientific Python development pattern. They
+are not used when the beamline server is running:
+
+- [`.pre-commit-config.yaml`](.pre-commit-config.yaml) runs Ruff formatting,
+  linting, and basic file checks before a commit when a developer enables
+  pre-commit. Keeping it helps prevent formatting and configuration mistakes.
+- [`mkdocs.yml`](mkdocs.yml) configures the documentation site built from
+  `docs/`. Keeping it makes the architecture and development documentation easy
+  to preview or publish.
+
+Both files should remain at the repository root by convention. They can be
+removed without affecting beamline execution, but retaining them keeps the
+repository aligned with the Scientific Python template.
 
 ## Troubleshooting
 
@@ -323,8 +348,9 @@ beamline workstation session with a functioning display and PySide6 installation
 
 ## Legacy and alternative servers
 
-[`plugin_00.py`](plugin_00.py) is the workstation compatibility entry point; the
-active implementation is in [`consumer.py`](src/pdf_auto/consumer.py).
+The active implementation is in [`consumer.py`](src/pdf_auto/consumer.py) and is
+started through the package CLI. The former wrapper is retained as
+[`legacy_servers/plugin_00.py`](legacy_servers/plugin_00.py) for reference.
 [`zmq_server.py`](legacy_servers/zmq_server.py) is an alternative implementation
 but is currently not working and should not be used for routine operation. Files under
 `legacy_replay_tools/` belong to older testing/replay workflows and should not be
