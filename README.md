@@ -266,14 +266,14 @@ headers.
 | [`plotting.py`](src/pdf_auto/plotting.py) | High-level interactive plots |
 | [`plot_widgets.py`](src/pdf_auto/plot_widgets.py) | Matplotlib sliders, buttons, and plot controls |
 | [`utilities.py`](src/pdf_auto/utilities.py) | Shared parsing, array, plotting, logging, and background helpers |
-| [`callbacks.py`](legacy_servers/callbacks.py) | Experimental/unused callback code retained for development reference |
-| [`zmq_server.py`](legacy_servers/zmq_server.py) | Alternative server implementation; currently not working |
-| [`plugin_00.py`](legacy_servers/plugin_00.py) | Legacy compatibility wrapper; no longer used by the Pixi task |
+| [`callbacks.py`](legacy/servers/callbacks.py) | Experimental/unused callback code retained for development reference |
+| [`zmq_server.py`](legacy/servers/zmq_server.py) | Alternative server implementation; currently not working |
+| [`plugin_00.py`](legacy/servers/plugin_00.py) | Legacy compatibility wrapper; no longer used by the Pixi task |
 
-The `legacy_replay_tools/` directory contains replay utilities and calibration
-assets from older server-testing workflows. It is retained for reference and
-manual event replay; it is not the active server and is not an automated test
-suite.
+The [`legacy/replay_tools/`](legacy/replay_tools/) directory contains replay
+utilities and calibration assets from older server-testing workflows. It is
+retained for reference and manual event replay; it is not the active server and
+is not an automated test suite.
 
 ## Development
 
@@ -354,8 +354,9 @@ beamline workstation session with a functioning display and PySide6 installation
 
 The active implementation is in [`consumer.py`](src/pdf_auto/consumer.py) and is
 started through the package CLI. The former wrapper is retained as
-[`legacy_servers/plugin_00.py`](legacy_servers/plugin_00.py) for reference.
-[`zmq_server.py`](legacy_servers/zmq_server.py) is an alternative implementation
-but is currently not working and should not be used for routine operation. Files under
-`legacy_replay_tools/` belong to older testing/replay workflows and should not be
-mistaken for the production entry point.
+[`legacy/servers/plugin_00.py`](legacy/servers/plugin_00.py) for reference.
+[`zmq_server.py`](legacy/servers/zmq_server.py) is an alternative implementation
+but is currently not working and should not be used for routine operation. Files
+under [`legacy/replay_tools/`](legacy/replay_tools/) belong to older
+testing/replay workflows and should not be mistaken for the production entry
+point.

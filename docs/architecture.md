@@ -17,7 +17,7 @@ pyFAI, PDFstream, or the local PDFgetX wheel.
 7. `plotting.py` and `plot_widgets.py` manage interactive visualization.
 
 The active Pixi task launches `python -m pdf_auto` directly. The previous
-`plugin_00.py` wrapper is retained under `legacy_servers/` for reference only.
+`plugin_00.py` wrapper is retained under `legacy/servers/` for reference only.
 
 ## Compatibility policy
 
