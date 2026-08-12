@@ -1,12 +1,4 @@
-from bluesky.callbacks.zmq import RemoteDispatcher
 from bluesky.callbacks.stream import LiveDispatcher
-from event_model import RunRouter
-
-import importlib
-img_getpdf = importlib.import_module("img_getpdf")
-img_plotter = importlib.import_module("img_plotter")
-server_log = importlib.import_module("utility").server_log
-bin_ndarray = importlib.import_module("utility").bin_ndarray
 
 class auto_img_gr(LiveDispatcher):
     # def __init__(self, uid, beamline_acronym, ini_config, *args, **kwargs):

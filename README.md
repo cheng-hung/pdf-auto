@@ -25,7 +25,7 @@ Dark scans and runs that already contain `original_run_uid` are not processed.
 
 ```mermaid
 flowchart TD
-    A["Bluesky run documents"] --> B["Kafka consumer in plugin_00.py"]
+    A["Bluesky run documents"] --> B["Kafka consumer in pdf_auto.consumer"]
     B --> C{"Start document is eligible?"}
     C -->|"Dark or previously processed run"| D["Skip run"]
     C -->|"Data run"| E["Load run from Tiled"]
@@ -101,9 +101,19 @@ pdf.bluesky.runengine.documents
 
 Stop the consumer with `Ctrl+C`.
 
-The hard-coded INI path in [`plugin_00.py`](plugin_00.py) is also intentional for
-the beamline workstation. If the repository is deployed elsewhere, the repository,
-wheel, and INI paths must be updated together and validated in that environment.
+After installing the package, the equivalent standard entry points are:
+
+```bash
+pdf-auto pdf
+python -m pdf_auto pdf
+```
+
+Use `--config /path/to/config.ini` to test another configuration while retaining
+the beamline workstation path as the default.
+
+The default INI path in [`config.py`](src/pdf_auto/config.py) is intentional for
+the beamline workstation. It can be overridden with `--config` for testing or a
+different deployment without changing the beamline default.
 
 ## Configuration
 
@@ -234,20 +244,42 @@ headers.
 
 | File | Responsibility |
 |---|---|
-| [`plugin_00.py`](plugin_00.py) | Active Kafka entry point, run filtering, and processing orchestration |
-| [`imgData_2D.py`](imgData_2D.py) | Configuration, Tiled access, acquisition classification, dark subtraction, stitching, and output paths |
-| [`img_integrate.py`](img_integrate.py) | Mask/calibration selection and pyFAI 2D-to-1D integration |
-| [`img_getpdf.py`](img_getpdf.py) | PDFgetX configuration, automatic background scaling, and PDF reduction |
-| [`img_plotter.py`](img_plotter.py) | High-level interactive plots |
-| [`subplot_tuner.py`](subplot_tuner.py) | Matplotlib sliders, buttons, and plot controls |
-| [`utility.py`](utility.py) | Shared parsing, array, plotting, logging, and background helpers |
-| [`callbacks.py`](callbacks.py) | Experimental/unused callback code retained for development reference |
-| [`zmq_server.py`](zmq_server.py) | Alternative server implementation; currently not working |
+| [`plugin_00.py`](plugin_00.py) | Compatibility entry point used by the beamline Pixi task |
+| [`cli.py`](src/pdf_auto/cli.py) | Command-line parsing and server startup |
+| [`consumer.py`](src/pdf_auto/consumer.py) | Active Kafka event routing and processing orchestration |
+| [`routing.py`](src/pdf_auto/routing.py) | Service-independent decisions about which start documents to process |
+| [`image_processing.py`](src/pdf_auto/image_processing.py) | Configuration, Tiled run access, acquisition classification, dark subtraction, stitching, and output paths |
+| [`integration.py`](src/pdf_auto/integration.py) | Mask/calibration selection and pyFAI 2D-to-1D integration |
+| [`reduction.py`](src/pdf_auto/reduction.py) | PDFgetX configuration, automatic background scaling, and PDF reduction |
+| [`plotting.py`](src/pdf_auto/plotting.py) | High-level interactive plots |
+| [`plot_widgets.py`](src/pdf_auto/plot_widgets.py) | Matplotlib sliders, buttons, and plot controls |
+| [`utilities.py`](src/pdf_auto/utilities.py) | Shared parsing, array, plotting, logging, and background helpers |
+| [`callbacks.py`](legacy_servers/callbacks.py) | Experimental/unused callback code retained for development reference |
+| [`zmq_server.py`](legacy_servers/zmq_server.py) | Alternative server implementation; currently not working |
 
 The `legacy_replay_tools/` directory contains replay utilities and calibration
 assets from older server-testing workflows. It is retained for reference and
 manual event replay; it is not the active server and is not an automated test
 suite.
+
+## Development
+
+The repository now uses the Scientific Python `src/` package layout. Runtime
+deployment remains managed by Pixi, while package metadata and developer-tool
+configuration live in [`pyproject.toml`](pyproject.toml).
+
+Install the package with test dependencies in an isolated Python 3.12 environment,
+then run:
+
+```bash
+pytest
+ruff check .
+ruff format --check .
+```
+
+Tests marked `beamline` require the NSLS-II services, calibration assets, and
+local PDFgetX wheel. The default test suite is offline and does not require those
+resources.
 
 ## Troubleshooting
 
@@ -291,8 +323,9 @@ beamline workstation session with a functioning display and PySide6 installation
 
 ## Legacy and alternative servers
 
-[`plugin_00.py`](plugin_00.py) is the active implementation.
-[`zmq_server.py`](zmq_server.py) is an alternative implementation but is currently
-not working and should not be used for routine operation. Files under
+[`plugin_00.py`](plugin_00.py) is the workstation compatibility entry point; the
+active implementation is in [`consumer.py`](src/pdf_auto/consumer.py).
+[`zmq_server.py`](legacy_servers/zmq_server.py) is an alternative implementation
+but is currently not working and should not be used for routine operation. Files under
 `legacy_replay_tools/` belong to older testing/replay workflows and should not be
 mistaken for the production entry point.

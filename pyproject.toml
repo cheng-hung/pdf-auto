@@ -1,0 +1,90 @@
+[build-system]
+requires = ["hatchling>=1.26"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pdf-auto"
+version = "2026.1.0"
+description = "Automatic area-detector reduction for the NSLS-II PDF beamline."
+readme = "README.md"
+requires-python = ">=3.12"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+dependencies = [
+    "matplotlib>=3.10",
+    "numpy",
+    "pandas>=3",
+    "scipy>=1.17",
+    "tifffile",
+]
+
+[project.optional-dependencies]
+beamline = [
+    "bluesky-kafka",
+    "diffpy.pdfgetx",
+    "event-model",
+    "nslsii>=0.11",
+    "pdfstream",
+    "pyFAI==2025.3.0",
+    "tiled-client>=0.2.3",
+]
+
+[project.scripts]
+pdf-auto = "pdf_auto.cli:main"
+
+[dependency-groups]
+test = ["pytest>=9", "pytest-cov>=7"]
+dev = [
+    { include-group = "test" },
+    "mypy>=1.17",
+    "pre-commit>=4",
+    "ruff>=0.12",
+]
+docs = [
+    "mkdocs>=1.6",
+    "mkdocs-material>=9",
+    "mkdocstrings-python>=1.18",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pdf_auto"]
+
+[tool.pytest.ini_options]
+minversion = "9.0"
+addopts = ["-ra", "--showlocals", "--strict-config", "--strict-markers"]
+testpaths = ["tests"]
+markers = ["beamline: requires NSLS-II services and the beamline deployment"]
+filterwarnings = ["error"]
+log_level = "INFO"
+
+[tool.coverage.run]
+source = ["pdf_auto"]
+
+[tool.coverage.report]
+exclude_also = ["if TYPE_CHECKING:", "if typing.TYPE_CHECKING:"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+extend-exclude = ["legacy_replay_tools", "legacy_servers"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "B", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+"legacy_replay_tools/**" = ["ALL"]
+"legacy_servers/**" = ["ALL"]
+
+[tool.mypy]
+files = ["src", "tests"]
+python_version = "3.12"
+warn_unused_configs = true
+warn_unreachable = true
+check_untyped_defs = true

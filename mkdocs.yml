@@ -1,0 +1,9 @@
+site_name: pdf-auto
+site_description: Automatic area-detector reduction for the NSLS-II PDF beamline
+repo_url: https://github.com/cheng-hung/pdf-auto
+theme:
+  name: material
+nav:
+  - Home: index.md
+  - Architecture: architecture.md
+  - Development: development.md
