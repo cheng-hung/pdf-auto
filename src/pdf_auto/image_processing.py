@@ -472,23 +472,6 @@ class ImageData2D(ImageDataConfig):
     sub_dk_img = subtract_dark
     start_process = is_processable_start
 
-    # def __call__(self, doc: dict, *args, **kwds):
-    #     name, message = doc
-
-    #     if (name == 'start') and self.start_process(doc):
-    #         print(
-    #             "\n*********************************************************\n"
-    #             f"\n\n{datetime.datetime.now().isoformat()} documents {name}\n"
-    #             f"document keys: {list(message.keys())}\n"
-    #             f"\n{message['uid'] = }\n")
-
-    #         print(f"\nThis is a data scan not dark scan. Start to process data.\n")
-
-    #         uid = message['uid']
-    #         meta = tiled_client[uid].start
-
-    #         print(f"\n{meta['calibration_md']['Distance'] = }\n")
-
 
 # Backward-compatible names used by earlier beamline scripts.
 imgData_config = ImageDataConfig

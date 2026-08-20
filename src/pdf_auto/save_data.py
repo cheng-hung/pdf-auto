@@ -98,9 +98,16 @@ class SaveData(CallbackBase):
 
     def event(self, doc):
         data = doc.get("data", {})
+        print(
+            "\n=== SaveData received a reduced event "
+            f"(raw_uid={data.get('raw_uid')}, acq_mode={data.get('acq_mode')}, "
+            f"sample={data.get('sample_name')}); writing files... ===\n",
+            flush=True,
+        )
         self._save_image(data)
         self._save_integration(data)
         self._save_pdf(data)
+        print("\n=== SaveData finished writing this event. ===\n", flush=True)
         return doc
 
     def save(self, data: dict) -> dict:
@@ -120,10 +127,11 @@ class SaveData(CallbackBase):
         image = data.get("image")
         tiff_fn = data.get("img_file")
         if image is None or not tiff_fn:
+            print("\n*** No processed image to save. ***\n", flush=True)
             return
         os.makedirs(os.path.dirname(tiff_fn), exist_ok=True)
         tifffile.imwrite(tiff_fn, image)
-        print(f"\n*** {os.path.basename(tiff_fn)} saved!! ***\n")
+        print(f"\n*** {os.path.basename(tiff_fn)} saved!! ***\n", flush=True)
 
     @staticmethod
     def _save_integration(data: dict) -> None:
@@ -135,14 +143,14 @@ class SaveData(CallbackBase):
         if iq_fn and q is not None and iq is not None:
             iq_df = pd.DataFrame({"q": q, "I": iq})
             write_iq_file(iq_fn, iq_df, md)
-            print(f"\n*** {os.path.basename(iq_fn)} saved!! ***\n")
+            print(f"\n*** {os.path.basename(iq_fn)} saved!! ***\n", flush=True)
 
         tth_fn = data.get("tth_file")
         tth = data.get("tth")
         if tth_fn and tth is not None and iq is not None:
             tth_df = pd.DataFrame({"tth": tth, "I": iq})
             write_iq_file(tth_fn, tth_df, md, header=("#tth", "I(q)"))
-            print(f"\n*** {os.path.basename(tth_fn)} saved!! ***\n")
+            print(f"\n*** {os.path.basename(tth_fn)} saved!! ***\n", flush=True)
 
     @staticmethod
     def _save_pdf(data: dict) -> dict:
@@ -150,10 +158,11 @@ class SaveData(CallbackBase):
         target_dir = data.get("pdfgetter_dir")
         prefix = data.get("pdfgetter_prefix")
         if pdfgetter is None or not target_dir or not prefix:
+            print("\n*** No PDF (S/F/G) products to save. ***\n", flush=True)
             return {}
         os.makedirs(target_dir, exist_ok=True)
         sqfqgr_path = write_pdfgetter(target_dir, prefix, pdfgetter)
-        print(f"\n*** {os.path.basename(sqfqgr_path['gr'])} saved!! ***\n")
+        print(f"\n*** {os.path.basename(sqfqgr_path['gr'])} saved!! ***\n", flush=True)
         return sqfqgr_path
 
 
@@ -184,12 +193,13 @@ def run_save_data_zmq(
         rd.subscribe(subscriber)
 
     print(
-        f"\n\n SaveData subscribed to {host} (prefix={prefix!r}); "
-        "waiting for reduced documents \n\n"
+        f"\n\n*** SaveData subscribed to {host} (prefix={prefix!r}); ***\n"
+        "waiting for reduced documents \n\n",
+        flush=True,
     )
 
     try:
         rd.start()
     except KeyboardInterrupt:
-        print("\nExiting SaveData ZMQ dispatcher")
+        print("\nExiting SaveData ZMQ dispatcher", flush=True)
         return ()

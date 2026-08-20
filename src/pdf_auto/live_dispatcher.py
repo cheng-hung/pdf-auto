@@ -100,23 +100,41 @@ class PDFAnalysisDispatcher(LiveDispatcher):
         # Reuse the same routing decision as the file-writing factory.
         self.factory_log.do_process = should_process_start(doc)
 
+        print(
+            "\n==================== [START] new run received "
+            f"(uid={doc.get('uid')}) ====================\n",
+            flush=True,
+        )
+
         if is_dark_start(doc):
-            print("\n***** This is a DARK scan skip process data. *****\n"
-                  )
+            print("\n***** This is a DARK scan; skip processing. *****\n", flush=True)
             self.factory_log.do_process = False
 
         elif "original_run_uid" in doc:
             print(
-                "\n***** This is a analysis scan already processed by PDFstream. *****\n"
+                "\n***** This is an analysis scan already processed by "
+                "PDFstream; skip. *****\n",
+                flush=True,
             )
             self.factory_log.do_process = False
 
         if self.factory_log.do_process:
             uid = doc["uid"]
+            print(
+                f"\n[START] Data scan accepted. Loading run {uid} from Tiled "
+                "and building the reducer...\n",
+                flush=True,
+            )
             self.img_analyzer = reduction.PDFReducer(
                 uid, self.tiled_client, self.ini_config
             )
-            print(f"\n{self.img_analyzer.acq_mode = }\n")
+            print(
+                f"\n[START] Reducer ready. acq_mode = {self.img_analyzer.acq_mode}. "
+                "Waiting for the stop document to reduce.\n",
+                flush=True,
+            )
+        else:
+            print("\n[START] Run will be skipped (not eligible).\n", flush=True)
 
         # Re-emit the raw start as an analysis-stream start document
         # (LiveDispatcher injects a new uid + original_run_uid).
@@ -128,6 +146,10 @@ class PDFAnalysisDispatcher(LiveDispatcher):
 
     def stop(self, doc, _md=None):
         if not self.factory_log.do_process or self.img_analyzer is None:
+            print(
+                "\n[STOP] Nothing to process for this run; emitting stop only.\n",
+                flush=True,
+            )
             super().stop(doc, _md=_md)
             self.factory_log.do_process = False
             self.img_analyzer = None
@@ -138,15 +160,41 @@ class PDFAnalysisDispatcher(LiveDispatcher):
         stream_name = list(doc["num_events"].keys())
         analyzer.stream_name = stream_name
 
+        print(
+            "\n-------------------- [STOP] starting reduction for "
+            f"uid={analyzer.full_uid} (sample={analyzer.sample_name}, "
+            f"detector={analyzer.detector}, acq_mode={analyzer.acq_mode}) "
+            "--------------------\n",
+            flush=True,
+        )
+        print(f"[STOP] stream(s): {stream_name}\n", flush=True)
+
         # Wait for data to be written to the databroker, then run the
         # compute-only pipeline. This dispatcher performs no file I/O; all
         # writing is done by pdf_auto.save_data.SaveData from the published
         # ``reduced`` event below.
+        print("[STEP 1/4] Waiting 1 s for data to land in the databroker...\n",
+              flush=True)
         time.sleep(1)
+
+        print("[STEP 2/4] Processing detector image (stitch / dark-subtract)...\n",
+              flush=True)
         process_img, tiff_fn = analyzer.compute_processed_image()
         poni_name, mask_name = analyzer.poni_mask_fn
+        print(
+            f"[STEP 2/4] Image ready -> {os.path.basename(tiff_fn)} "
+            f"(poni={os.path.basename(poni_name)}, "
+            f"mask={os.path.basename(mask_name)}).\n",
+            flush=True,
+        )
 
+        print("[STEP 3/4] pyFAI 2D->1D integration...\n", flush=True)
         iq_df, tth_df, integration_md, iq_fn, tth_fn, cake = analyzer.pct_integration()
+        print(
+            f"[STEP 3/4] Integration ready -> {os.path.basename(iq_fn)}, "
+            f"{os.path.basename(tth_fn)}.\n",
+            flush=True,
+        )
 
         output_paths: dict[str, str] = {
             "img": tiff_fn,
@@ -174,12 +222,24 @@ class PDFAnalysisDispatcher(LiveDispatcher):
             scalars["temperature_unit"] = analyzer.T_unit
 
         if analyzer.do_reduction and analyzer.acq_mode == "PDF":
+            print("[STEP 4/4] PDF acquisition: PDFgetX reduction (S/F/G)...\n",
+                  flush=True)
             pdfgetter, pdf_dir, pdf_prefix = analyzer.get_gr(iq_df)
             arrays["pdfgetter"] = pdfgetter
             arrays["pdfgetter_dir"] = pdf_dir
             arrays["pdfgetter_prefix"] = pdf_prefix
             scalars["bgscale"] = float(analyzer.pdfconfig().bgscale[0])
             scalars["backgroundfile"] = analyzer.pdfconfig_dict["backgroundfile"]
+            print(
+                f"[STEP 4/4] PDF reduction ready (prefix={pdf_prefix}, "
+                f"bgscale={scalars['bgscale']:.4f}).\n",
+                flush=True,
+            )
+        else:
+            print(
+                "[STEP 4/4] Not a PDF acquisition; skipping G(r) transformation.\n",
+                flush=True,
+            )
 
         data = analysis_event_data(
             raw_uid=analyzer.full_uid,
@@ -192,12 +252,23 @@ class PDFAnalysisDispatcher(LiveDispatcher):
         )
 
         # Emit the synthesized analysis event, then the analysis stop document.
+        print(
+            "[PUBLISH] Emitting the reduced event to the analysis stream "
+            "(subscribers/publisher will now receive it)...\n",
+            flush=True,
+        )
         self.process_event(
             {"data": data, "descriptor": None, "filled": {}},
             stream_name=ANALYSIS_STREAM_NAME,
             config={"data_keys": analysis_data_keys(data)},
         )
         super().stop(doc, _md=_md)
+
+        print(
+            "-------------------- [DONE] reduction published for "
+            f"uid={analyzer.full_uid} --------------------\n",
+            flush=True,
+        )
 
         self.factory_log.do_process = False
         self.img_analyzer = None
@@ -261,7 +332,7 @@ def run_analysis_stream_zmq(
         publisher = Publisher(publish_host, prefix=publish_prefix)
         dispatcher.subscribe(publisher)
         print(
-            f"\n Publish reduced documents to {publish_host} "
+            f"\n*** Publish reduced documents to {publish_host} ***\n"
             f"(prefix={publish_prefix!r}) \n"
         )
 
@@ -272,7 +343,7 @@ def run_analysis_stream_zmq(
     rd.subscribe(dispatcher)
 
     print(
-        f"\n\n Subscribe to RemoteDispatcher at {zmq_address} "
+        f"\n\n*** Subscribe to RemoteDispatcher at {zmq_address} ***\n"
         f"(prefix={prefix!r}) and start the analysis stream \n\n"
     )
 
