@@ -1,4 +1,5 @@
 import tomllib
+from configparser import ConfigParser
 from pathlib import Path
 
 REPOSITORY_ROOT = Path(__file__).parents[1]
@@ -62,3 +63,12 @@ def test_pixi_declares_active_runtime_dependencies() -> None:
 
 def test_default_ini_file_exists() -> None:
     assert (REPOSITORY_ROOT / "pdf_auto_config.ini").is_file()
+
+
+def test_default_ini_declares_listen_to_section() -> None:
+    parser = ConfigParser()
+    parser.read(REPOSITORY_ROOT / "pdf_auto_config.ini")
+
+    assert parser.has_section("LISTEN TO")
+    assert parser.get("LISTEN TO", "zmq_address")
+    assert parser.get("LISTEN TO", "prefix") == "raw"

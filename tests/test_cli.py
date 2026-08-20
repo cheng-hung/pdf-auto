@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from pdf_auto.cli import DEFAULT_ZMQ_ADDRESS, build_parser
+from pdf_auto.cli import build_parser
 from pdf_auto.config import DEFAULT_CONFIG_PATH
 
 
@@ -24,16 +24,28 @@ def test_cli_defaults_to_consumer_mode() -> None:
     args = build_parser().parse_args(["pdf"])
 
     assert args.mode == "consumer"
-    assert args.zmq_address == DEFAULT_ZMQ_ADDRESS
+    # Address/prefix default to None so the INI [LISTEN TO] section is the
+    # source of truth unless explicitly overridden on the command line.
+    assert args.zmq_address is None
+    assert args.prefix is None
 
 
 def test_cli_accepts_analysis_mode_and_zmq_override() -> None:
     args = build_parser().parse_args(
-        ["pdf", "--mode", "analysis", "--zmq-address", "tcp://localhost:5578"]
+        [
+            "pdf",
+            "--mode",
+            "analysis",
+            "--zmq-address",
+            "tcp://localhost:5578",
+            "--prefix",
+            "raw",
+        ]
     )
 
     assert args.mode == "analysis"
     assert args.zmq_address == "tcp://localhost:5578"
+    assert args.prefix == "raw"
 
 
 def test_cli_rejects_unknown_mode() -> None:

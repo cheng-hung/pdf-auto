@@ -21,6 +21,7 @@ from __future__ import annotations
 import os
 import time
 from collections.abc import Callable, Iterable
+from configparser import ConfigParser
 
 from bluesky.callbacks.stream import LiveDispatcher
 from bluesky.callbacks.zmq import RemoteDispatcher
@@ -37,6 +38,27 @@ from .routing import is_dark_start, should_process_start
 from .utilities import ServerState
 
 ini_config = str(DEFAULT_CONFIG_PATH)
+
+# Final fallbacks used when the INI has no ``[LISTEN TO]`` section and no
+# explicit override is passed. ``DEFAULT_ZMQ_ADDRESS`` is shared with the CLI.
+DEFAULT_ZMQ_ADDRESS = "ipc:///var/lib/bluesky-zmq-proxy/pdf-ipc-in-ipc-out/out.sock"
+DEFAULT_PREFIX = "raw"
+
+
+def read_listen_config(ini_config: str) -> tuple[str, bytes]:
+    """Read the ZMQ ``zmq_address`` and ``prefix`` from ``[LISTEN TO]``.
+
+    The ``prefix`` is returned as ``bytes`` because
+    :class:`bluesky.callbacks.zmq.RemoteDispatcher` expects a bytes prefix
+    filter. Missing keys or a missing section fall back to the module defaults.
+    """
+    parser = ConfigParser()
+    parser.read(ini_config)
+    zmq_address = parser.get(
+        "LISTEN TO", "zmq_address", fallback=DEFAULT_ZMQ_ADDRESS
+    )
+    prefix = parser.get("LISTEN TO", "prefix", fallback=DEFAULT_PREFIX)
+    return zmq_address, prefix.encode()
 
 
 class PDFAnalysisDispatcher(LiveDispatcher):
@@ -176,7 +198,8 @@ class PDFAnalysisDispatcher(LiveDispatcher):
 def run_analysis_stream_zmq(
     beamline_acronym: str,
     ini_config: str = ini_config,
-    zmq_address: str = "ipc:///var/lib/bluesky-zmq-proxy/pdf-ipc-in-ipc-out/out.sock",
+    zmq_address: str | None = None,
+    prefix: bytes | str | None = None,
     subscribers: Iterable[Callable[[str, dict], None]] | None = None,
 ):
     """Run the reduction as a re-emitted analysis stream over ZMQ.
@@ -186,29 +209,43 @@ def run_analysis_stream_zmq(
     writer, a live plotter, or another publisher), subscribes the dispatcher to
     a :class:`bluesky.callbacks.zmq.RemoteDispatcher`, and starts polling.
 
+    The ZMQ ``zmq_address`` and ``prefix`` are read from the ``[LISTEN TO]``
+    section of ``ini_config``. Explicit ``zmq_address``/``prefix`` arguments (if
+    not ``None``) override the INI values.
+
     Parameters
     ----------
     zmq_address:
-        ZMQ address of the beamline document proxy's output socket. Defaults to
-        the PDF beamline proxy path used elsewhere in this package.
+        ZMQ address of the beamline document proxy's output socket. When
+        ``None``, the value from ``[LISTEN TO]`` in the INI is used.
+    prefix:
+        ``RemoteDispatcher`` prefix filter matching the publisher's document
+        prefix (e.g. ``b"raw"``). A ``str`` is encoded to ``bytes``. When
+        ``None``, the value from ``[LISTEN TO]`` in the INI is used.
     subscribers:
         Optional iterable of ``cb(name, doc)`` callbacks subscribed to the
         analysis stream. If ``None``, the analysis documents are still emitted
         and schema-validated but go nowhere (useful for a smoke test).
-
-    Notes
-    -----
-    Wiring the live ZMQ subscription is intentionally the last step; adjust
-    ``zmq_address`` and add subscribers as downstream consumers come online.
     """
+    ini_zmq_address, ini_prefix = read_listen_config(ini_config)
+    if zmq_address is None:
+        zmq_address = ini_zmq_address
+    if prefix is None:
+        prefix = ini_prefix
+    elif isinstance(prefix, str):
+        prefix = prefix.encode()
+
     dispatcher = PDFAnalysisDispatcher(beamline_acronym, ini_config)
     for subscriber in subscribers or ():
         dispatcher.subscribe(subscriber)
 
-    rd = RemoteDispatcher(zmq_address)
+    rd = RemoteDispatcher(zmq_address, prefix=prefix)
     rd.subscribe(dispatcher)
 
-    print("\n\n Subscribe to RemoteDispatcher and start the analysis stream \n\n")
+    print(
+        f"\n\n Subscribe to RemoteDispatcher at {zmq_address} "
+        f"(prefix={prefix!r}) and start the analysis stream \n\n"
+    )
 
     try:
         rd.start()

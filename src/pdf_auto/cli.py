@@ -9,11 +9,6 @@ from pathlib import Path
 
 from .config import DEFAULT_CONFIG_PATH
 
-# Default beamline ZMQ document-proxy output socket. Kept in sync with
-# ``pdf_auto.live_dispatcher.run_analysis_stream_zmq``; imported lazily there to
-# keep this module free of beamline dependencies.
-DEFAULT_ZMQ_ADDRESS = "ipc:///var/lib/bluesky-zmq-proxy/pdf-ipc-in-ipc-out/out.sock"
-
 
 def build_parser() -> argparse.ArgumentParser:
     """Build the parser without initializing beamline services."""
@@ -43,10 +38,18 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--zmq-address",
-        default=DEFAULT_ZMQ_ADDRESS,
+        default=None,
         help=(
-            "ZMQ document-proxy output socket for --mode analysis "
-            f"(default: {DEFAULT_ZMQ_ADDRESS})."
+            "ZMQ document-proxy output socket for --mode analysis. Overrides "
+            "the [LISTEN TO] zmq_address in the INI when given."
+        ),
+    )
+    parser.add_argument(
+        "--prefix",
+        default=None,
+        help=(
+            "RemoteDispatcher prefix filter for --mode analysis. Overrides the "
+            "[LISTEN TO] prefix in the INI when given."
         ),
     )
     return parser
@@ -65,6 +68,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             args.beamline,
             ini_config=str(args.config),
             zmq_address=args.zmq_address,
+            prefix=args.prefix,
         )
         return 0
 
