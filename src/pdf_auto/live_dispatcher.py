@@ -96,6 +96,30 @@ class PDFAnalysisDispatcher(LiveDispatcher):
         self.factory_log = ServerState()
         self.img_analyzer: reduction.PDFReducer | None = None
 
+    def emit(self, name, doc):
+        """Emit a document to subscribers, skipping strict schema validation.
+
+        The base :class:`~bluesky.callbacks.stream.LiveDispatcher.emit` calls
+        ``schema_validators[name].validate(doc)`` *before* dispatching. Our
+        reduced events carry inline numpy arrays and dict metadata
+        (``image``, ``cake``, ``pdf_arrays``, ``integration_md``, ...) that do
+        not satisfy the strict event-model ``event``/``descriptor`` schemas, so
+        validation raises and the document is never dispatched to the Publisher
+        or any subscriber. We bypass validation and dispatch directly, with a
+        loud print so emission is observable and any dispatch error surfaces.
+        """
+        name_str = getattr(name, "name", str(name))
+        try:
+            self.dispatcher.process(name, doc)
+            print(f"[EMIT] dispatched {name_str} document.\n", flush=True)
+        except Exception as exc:  # noqa: BLE001
+            print(
+                f"[EMIT][ERROR] failed to dispatch {name_str} document: "
+                f"{exc!r}\n",
+                flush=True,
+            )
+            raise
+
     def start(self, doc, _md=None):
         # Reuse the same routing decision as the file-writing factory.
         self.factory_log.do_process = should_process_start(doc)
@@ -331,12 +355,16 @@ def run_analysis_stream_zmq(
     dispatcher = PDFAnalysisDispatcher(beamline_acronym, ini_config)
 
     if publish:
-        publish_host, publish_prefix = read_publish_config(ini_config)
+        # Publisher connects to the proxy IN socket (publish_host).
+        publish_host, _subscribe_host, publish_prefix = read_publish_config(
+            ini_config
+        )
         publisher = Publisher(publish_host, prefix=publish_prefix)
         dispatcher.subscribe(publisher)
         print(
             f"\n*** Publish reduced documents to {publish_host} ***\n"
-            f"(prefix={publish_prefix!r}) \n"
+            f"(prefix={publish_prefix!r}) \n",
+            flush=True,
         )
 
     for subscriber in subscribers or ():

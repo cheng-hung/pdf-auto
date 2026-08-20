@@ -90,5 +90,10 @@ def test_default_ini_declares_publish_to_section() -> None:
     parser.read(REPOSITORY_ROOT / "pdf_auto_config.ini")
 
     assert parser.has_section("PUBLISH TO")
-    assert parser.get("PUBLISH TO", "host")
+    # Publisher (IN) and subscriber (OUT) must be distinct proxy sockets.
+    publish_host = parser.get("PUBLISH TO", "publish_host")
+    subscribe_host = parser.get("PUBLISH TO", "subscribe_host")
+    assert publish_host
+    assert subscribe_host
+    assert publish_host != subscribe_host
     assert parser.get("PUBLISH TO", "prefix") == "reduced"

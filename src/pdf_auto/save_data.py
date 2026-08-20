@@ -45,22 +45,47 @@ from .config import DEFAULT_CONFIG_PATH
 ini_config = str(DEFAULT_CONFIG_PATH)
 
 # Final fallbacks mirroring the ``[PUBLISH TO]`` INI section.
-DEFAULT_PUBLISH_HOST = "ipc:///var/lib/bluesky-zmq-proxy/pdf-tcp-in-ipc-out/out.sock"
+#
+# A bluesky ZMQ proxy has two sockets: the Publisher *connects to the IN socket*
+# to push documents into the proxy; a RemoteDispatcher *connects to the OUT
+# socket* to receive documents forwarded out of the proxy. These are DIFFERENT
+# addresses. Using the OUT socket for both means the Publisher pushes into a
+# dead end and no subscriber ever receives anything.
+DEFAULT_PUBLISH_IN = "ipc:///var/lib/bluesky-zmq-proxy/pdf-tcp-in-ipc-out/in.sock"
+DEFAULT_PUBLISH_OUT = "ipc:///var/lib/bluesky-zmq-proxy/pdf-tcp-in-ipc-out/out.sock"
 DEFAULT_PUBLISH_PREFIX = "reduced"
 
 
-def read_publish_config(ini_config: str) -> tuple[str, bytes]:
-    """Read the ZMQ ``host`` and ``prefix`` from the ``[PUBLISH TO]`` section.
+def read_publish_config(ini_config: str) -> tuple[str, str, bytes]:
+    """Read the publish/subscribe hosts and ``prefix`` from ``[PUBLISH TO]``.
 
-    The ``prefix`` is returned as ``bytes`` because the ZMQ
-    :class:`~bluesky.callbacks.zmq.Publisher`/:class:`RemoteDispatcher` expect a
-    bytes prefix. Missing keys or a missing section fall back to the defaults.
+    Returns ``(publish_host, subscribe_host, prefix_bytes)`` where:
+
+    - ``publish_host`` is the proxy **IN** socket the :class:`Publisher`
+      connects to (INI key ``publish_host``, falling back to ``host`` then the
+      default IN socket);
+    - ``subscribe_host`` is the proxy **OUT** socket the SaveData
+      :class:`RemoteDispatcher` connects to (INI key ``subscribe_host``, falling
+      back to ``host`` then the default OUT socket).
+
+    ``prefix`` is returned as ``bytes`` because the ZMQ callbacks require it.
     """
     parser = ConfigParser()
     parser.read(ini_config)
-    host = parser.get("PUBLISH TO", "host", fallback=DEFAULT_PUBLISH_HOST)
+    # ``host`` (legacy single key) is used as a fallback for either side.
+    legacy_host = parser.get("PUBLISH TO", "host", fallback=None)
+    publish_host = parser.get(
+        "PUBLISH TO",
+        "publish_host",
+        fallback=legacy_host if legacy_host else DEFAULT_PUBLISH_IN,
+    )
+    subscribe_host = parser.get(
+        "PUBLISH TO",
+        "subscribe_host",
+        fallback=legacy_host if legacy_host else DEFAULT_PUBLISH_OUT,
+    )
     prefix = parser.get("PUBLISH TO", "prefix", fallback=DEFAULT_PUBLISH_PREFIX)
-    return host, prefix.encode()
+    return publish_host, subscribe_host, prefix.encode()
 
 
 def write_iq_file(fn, df, md, header=("#q_A^-1", "I(q)")):
@@ -205,13 +230,13 @@ def run_save_data_zmq(
     """Run :class:`SaveData` against the published ``reduced`` ZMQ stream.
 
     Subscribes a :class:`SaveData` (and any ``extra_subscribers``) to a
-    :class:`bluesky.callbacks.zmq.RemoteDispatcher` connected to the
-    ``[PUBLISH TO]`` proxy, then starts polling. ``host``/``prefix`` override the
-    INI values when given.
+    :class:`bluesky.callbacks.zmq.RemoteDispatcher` connected to the proxy
+    **OUT** socket (``subscribe_host`` in ``[PUBLISH TO]``), then starts polling.
+    ``host`` overrides the subscribe address; ``prefix`` overrides the prefix.
     """
-    ini_host, ini_prefix = read_publish_config(ini_config)
+    _publish_host, subscribe_host, ini_prefix = read_publish_config(ini_config)
     if host is None:
-        host = ini_host
+        host = subscribe_host
     if prefix is None:
         prefix = ini_prefix
     elif isinstance(prefix, str):
