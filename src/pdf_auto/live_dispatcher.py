@@ -77,7 +77,10 @@ class PDFAnalysisDispatcher(LiveDispatcher):
         self.factory_log.do_process = should_process_start(doc)
 
         if is_dark_start(doc):
-            print("\n***** This is a DARK scan skip process data. *****\n")
+            print("\n***** This is a DARK scan skip process data. *****\n"
+                  )
+            self.factory_log.do_process = False
+
         elif "original_run_uid" in doc:
             print(
                 "\n***** This is a analysis scan already processed by PDFstream. *****\n"
