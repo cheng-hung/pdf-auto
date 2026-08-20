@@ -46,13 +46,13 @@ ini_config = str(DEFAULT_CONFIG_PATH)
 
 # Final fallbacks mirroring the ``[PUBLISH TO]`` INI section.
 #
-# A bluesky ZMQ proxy has two sockets: the Publisher *connects to the IN socket*
-# to push documents into the proxy; a RemoteDispatcher *connects to the OUT
-# socket* to receive documents forwarded out of the proxy. These are DIFFERENT
-# addresses. Using the OUT socket for both means the Publisher pushes into a
-# dead end and no subscriber ever receives anything.
-DEFAULT_PUBLISH_IN = "ipc:///var/lib/bluesky-zmq-proxy/pdf-tcp-in-ipc-out/in.sock"
-DEFAULT_PUBLISH_OUT = "ipc:///var/lib/bluesky-zmq-proxy/pdf-tcp-in-ipc-out/out.sock"
+# The reduced stream is published into one proxy and read out of another (see
+# the [PUBLISH TO] comments in pdf_auto_config.ini): the Publisher connects to
+# the pdf-tcp-in-ipc-out proxy's out.sock, while the SaveData/plotting
+# RemoteDispatcher connects to the pdf-ipc-in-ipc-out proxy's out.sock. These
+# are DIFFERENT proxies; do not collapse them into one address.
+DEFAULT_PUBLISH_IN = "ipc:///var/lib/bluesky-zmq-proxy/pdf-tcp-in-ipc-out/out.sock"
+DEFAULT_PUBLISH_OUT = "ipc:///var/lib/bluesky-zmq-proxy/pdf-ipc-in-ipc-out/out.sock"
 DEFAULT_PUBLISH_PREFIX = "reduced"
 
 
