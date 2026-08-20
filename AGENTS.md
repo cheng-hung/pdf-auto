@@ -7,11 +7,12 @@ domain, config, and output details. This file only covers agent-specific gotchas
 
 ## Environment reality vs. deployment target
 
-- This checkout runs on macOS, but the project targets **`linux-64` only**
-  (`pixi.toml`). `pixi install` / `pixi run pdf_auto` will NOT work here — they
-  pull conda `linux-64` packages and a beamline-local PDFgetX wheel at
-  `/home/xf28id1/...`. Do not "fix" those absolute paths; they are the beamline
-  deployment and are intentional (see README).
+- The project targets **`linux-64` only** (`pixi.toml`). Even on a linux
+  checkout, `pixi install` / `pixi run pdf_auto` will not fully work off the
+  beamline workstation: they pull the beamline-local PDFgetX wheel at
+  `/home/xf28id1/...` and expect beamline paths/services. Do not "fix" those
+  absolute paths; they are the beamline deployment and are intentional (see
+  README).
 - For local dev, use plain Python 3.12 + `pip install -e '.[dev]'`, not Pixi.
 
 ## Commands (local dev)
@@ -26,8 +27,9 @@ mypy                   # files = src, tests (config in pyproject)
 - `pytest` runs under `filterwarnings = error` and `--strict-markers`: any
   unexpected warning or unregistered marker fails the run.
 - Tests requiring beamline services must use the registered `beamline` marker.
-  The default suite is offline; there is currently no CI workflow (`.github/`
-  has no workflows).
+  The default suite is offline. CI (`.github/workflows/test.yml`) runs `pytest`
+  on ubuntu with `MPLBACKEND=Agg`, installing only the base package + pytest —
+  so the offline suite must never import beamline-extra deps at collection time.
 
 ## Import boundary (critical for local work)
 

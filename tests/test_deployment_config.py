@@ -15,6 +15,17 @@ def test_pixi_task_launches_package_directly() -> None:
     assert task["env"]["MPLBACKEND"] == "qtagg"
 
 
+def test_pixi_analysis_task_launches_analysis_mode() -> None:
+    with (REPOSITORY_ROOT / "pixi.toml").open("rb") as stream:
+        pixi_config = tomllib.load(stream)
+
+    task = pixi_config["tasks"]["pdf-analysis"]
+
+    assert task["cmd"] == "python -m pdf_auto pdf --mode analysis"
+    assert task["env"]["PYTHONPATH"].endswith("/pdf-auto/src")
+    assert task["env"]["MPLBACKEND"] == "qtagg"
+
+
 def test_pixi_uses_one_default_environment() -> None:
     with (REPOSITORY_ROOT / "pixi.toml").open("rb") as stream:
         pixi_config = tomllib.load(stream)

@@ -38,6 +38,7 @@ beamline = [
 
 [project.scripts]
 pdf-auto = "pdf_auto.cli:main"
+pdf-analysis = "pdf_auto.cli:analysis_main"
 
 [dependency-groups]
 test = ["pytest>=9", "pytest-cov>=7"]
