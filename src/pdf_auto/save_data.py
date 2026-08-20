@@ -182,6 +182,7 @@ class SaveData(CallbackBase):
             return
         os.makedirs(os.path.dirname(tiff_fn), exist_ok=True)
         tifffile.imwrite(tiff_fn, image)
+        print(f"\n*** Saved to {os.path.dirname(tiff_fn)} ***\n", flush=True)
         print(f"\n*** {os.path.basename(tiff_fn)} saved!! ***\n", flush=True)
 
     @staticmethod
