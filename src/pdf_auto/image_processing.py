@@ -430,8 +430,14 @@ class ImageData2D(ImageDataConfig):
 
         return sub_img
 
-    def save_processed_image(self):
-        """Process the current run and save its detector image."""
+    def compute_processed_image(self):
+        """Process the current run's detector image without writing it.
+
+        Populates ``self.process_img`` and returns ``(process_img, tiff_fn)``.
+        File I/O is the responsibility of :class:`pdf_auto.save_data.SaveData`;
+        this method only computes the array and its intended output path so the
+        analysis stream can publish both.
+        """
 
         if self.stream_length == self.num_positions:
             self.process_img = np.nan_to_num(self.stitch_images())
@@ -455,10 +461,7 @@ class ImageData2D(ImageDataConfig):
                     )
 
         tiff_fn = self.output_data_path(sub_name="img", file_type="tiff")
-        tifffile.imwrite(tiff_fn, self.process_img)
-        print(f"\n*** {os.path.basename(tiff_fn)} saved!! ***\n")
-
-        # return self.process_img
+        return self.process_img, tiff_fn
 
     def is_processable_start(self, doc: dict):
         """Return whether a start document represents a non-dark run."""
@@ -467,7 +470,6 @@ class ImageData2D(ImageDataConfig):
     # Backward-compatible method names used by earlier beamline scripts.
     sum_pilatus2 = stitch_images
     sub_dk_img = subtract_dark
-    save_processed_img = save_processed_image
     start_process = is_processable_start
 
     # def __call__(self, doc: dict, *args, **kwds):

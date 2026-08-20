@@ -1,5 +1,18 @@
-"""Support ``python -m pdf_auto``."""
+"""Support ``python -m pdf_auto``.
 
-from .cli import main
+The first argument selects the entry point:
+
+- ``python -m pdf_auto save [--config ... --host ... --prefix ...]`` runs the
+  SaveData ZMQ subscriber (:func:`pdf_auto.cli.save_main`);
+- anything else (e.g. ``python -m pdf_auto pdf --mode analysis``) runs the
+  reduction workflow (:func:`pdf_auto.cli.main`).
+"""
+
+import sys
+
+from .cli import main, save_main
+
+if len(sys.argv) > 1 and sys.argv[1] == "save":
+    raise SystemExit(save_main(sys.argv[2:]))
 
 raise SystemExit(main())

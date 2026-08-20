@@ -24,7 +24,7 @@ from collections.abc import Callable, Iterable
 from configparser import ConfigParser
 
 from bluesky.callbacks.stream import LiveDispatcher
-from bluesky.callbacks.zmq import RemoteDispatcher
+from bluesky.callbacks.zmq import Publisher, RemoteDispatcher
 from tiled.client import from_profile
 
 from . import reduction
@@ -35,6 +35,7 @@ from .analysis_stream import (
 )
 from .config import DEFAULT_CONFIG_PATH
 from .routing import is_dark_start, should_process_start
+from .save_data import read_publish_config
 from .utilities import ServerState
 
 ini_config = str(DEFAULT_CONFIG_PATH)
@@ -83,8 +84,9 @@ class PDFAnalysisDispatcher(LiveDispatcher):
     - The base ``LiveDispatcher.event`` is a no-op here because reduction is
       stop-driven and reads full image stacks from Tiled; there is nothing
       useful to transform per raw event.
-    - Payloads are paths + scalars only (see :mod:`pdf_auto.analysis_stream`);
-      raw arrays are never embedded in the emitted documents.
+    - This dispatcher is *compute-only*: it publishes the reduced arrays, target
+      paths, and header metadata inline (see :mod:`pdf_auto.analysis_stream`) and
+      performs no file I/O. Writing is done by :class:`pdf_auto.save_data.SaveData`.
     """
 
     def __init__(self, beamline_acronym: str, ini_config: str):
@@ -136,19 +138,34 @@ class PDFAnalysisDispatcher(LiveDispatcher):
         stream_name = list(doc["num_events"].keys())
         analyzer.stream_name = stream_name
 
-        # Wait for data to be written to the databroker, then run the pipeline.
+        # Wait for data to be written to the databroker, then run the
+        # compute-only pipeline. This dispatcher performs no file I/O; all
+        # writing is done by pdf_auto.save_data.SaveData from the published
+        # ``reduced`` event below.
         time.sleep(1)
-        analyzer.save_processed_image()
+        process_img, tiff_fn = analyzer.compute_processed_image()
         poni_name, mask_name = analyzer.poni_mask_fn
 
-        iq_df, iq_fn, _unrolled = analyzer.pct_integration()
-        tth_fn = analyzer.output_data_path(sub_name="tth", file_type="xy")
+        iq_df, tth_df, integration_md, iq_fn, tth_fn, cake = analyzer.pct_integration()
 
-        output_paths: dict[str, str] = {"iq": iq_fn, "tth": tth_fn}
+        output_paths: dict[str, str] = {
+            "img": tiff_fn,
+            "iq": iq_fn,
+            "tth": tth_fn,
+        }
         scalars: dict[str, object] = {
             "poni_file": os.path.basename(poni_name),
             "mask_file": os.path.basename(mask_name),
             "stitched": analyzer.stream_length == analyzer.num_positions,
+        }
+        # Reduced arrays carried inline for SaveData (and plotting later).
+        arrays: dict[str, object] = {
+            "image": process_img,
+            "cake": cake,
+            "q": iq_df["q"].to_numpy(),
+            "iq": iq_df["I"].to_numpy(),
+            "tth": tth_df["tth"].to_numpy(),
+            "integration_md": integration_md,
         }
 
         temperature = analyzer.temperature
@@ -157,14 +174,10 @@ class PDFAnalysisDispatcher(LiveDispatcher):
             scalars["temperature_unit"] = analyzer.T_unit
 
         if analyzer.do_reduction and analyzer.acq_mode == "PDF":
-            sqfqgr_path = analyzer.get_gr(iq_df)
-            output_paths.update(
-                {
-                    "sq": sqfqgr_path.get("sq", ""),
-                    "fq": sqfqgr_path.get("fq", ""),
-                    "gr": sqfqgr_path.get("gr", ""),
-                }
-            )
+            pdfgetter, pdf_dir, pdf_prefix = analyzer.get_gr(iq_df)
+            arrays["pdfgetter"] = pdfgetter
+            arrays["pdfgetter_dir"] = pdf_dir
+            arrays["pdfgetter_prefix"] = pdf_prefix
             scalars["bgscale"] = float(analyzer.pdfconfig().bgscale[0])
             scalars["backgroundfile"] = analyzer.pdfconfig_dict["backgroundfile"]
 
@@ -175,6 +188,7 @@ class PDFAnalysisDispatcher(LiveDispatcher):
             detector=analyzer.detector,
             output_paths=output_paths,
             scalars=scalars,
+            arrays=arrays,
         )
 
         # Emit the synthesized analysis event, then the analysis stop document.
@@ -200,32 +214,37 @@ def run_analysis_stream_zmq(
     ini_config: str = ini_config,
     zmq_address: str | None = None,
     prefix: bytes | str | None = None,
+    publish: bool = True,
     subscribers: Iterable[Callable[[str, dict], None]] | None = None,
 ):
     """Run the reduction as a re-emitted analysis stream over ZMQ.
 
-    Builds a :class:`PDFAnalysisDispatcher`, attaches any provided
-    ``subscribers`` (document-style callbacks ``cb(name, doc)`` such as a Tiled
-    writer, a live plotter, or another publisher), subscribes the dispatcher to
-    a :class:`bluesky.callbacks.zmq.RemoteDispatcher`, and starts polling.
+    Builds a :class:`PDFAnalysisDispatcher`, publishes its reduced documents to
+    the ``[PUBLISH TO]`` proxy via a :class:`bluesky.callbacks.zmq.Publisher`,
+    attaches any provided ``subscribers``, subscribes the dispatcher to the
+    ``[LISTEN TO]`` :class:`bluesky.callbacks.zmq.RemoteDispatcher`, and starts
+    polling.
 
-    The ZMQ ``zmq_address`` and ``prefix`` are read from the ``[LISTEN TO]``
-    section of ``ini_config``. Explicit ``zmq_address``/``prefix`` arguments (if
-    not ``None``) override the INI values.
+    The listen ``zmq_address``/``prefix`` come from ``[LISTEN TO]``; the publish
+    ``host``/``prefix`` come from ``[PUBLISH TO]``. Explicit ``zmq_address``/
+    ``prefix`` arguments override the listen INI values when not ``None``.
 
     Parameters
     ----------
     zmq_address:
-        ZMQ address of the beamline document proxy's output socket. When
-        ``None``, the value from ``[LISTEN TO]`` in the INI is used.
+        ZMQ address of the beamline document proxy's output socket (listen).
+        When ``None``, the ``[LISTEN TO]`` INI value is used.
     prefix:
-        ``RemoteDispatcher`` prefix filter matching the publisher's document
-        prefix (e.g. ``b"raw"``). A ``str`` is encoded to ``bytes``. When
-        ``None``, the value from ``[LISTEN TO]`` in the INI is used.
+        ``RemoteDispatcher`` prefix filter for the listen stream (e.g.
+        ``b"raw"``). A ``str`` is encoded to ``bytes``. When ``None``, the
+        ``[LISTEN TO]`` INI value is used.
+    publish:
+        When ``True`` (default), a :class:`Publisher` for the ``[PUBLISH TO]``
+        ``reduced`` stream is subscribed to the dispatcher so downstream
+        SaveData/plotting callbacks receive the reduced documents.
     subscribers:
-        Optional iterable of ``cb(name, doc)`` callbacks subscribed to the
-        analysis stream. If ``None``, the analysis documents are still emitted
-        and schema-validated but go nowhere (useful for a smoke test).
+        Optional extra ``cb(name, doc)`` callbacks subscribed to the analysis
+        stream (e.g. an in-process SaveData for testing).
     """
     ini_zmq_address, ini_prefix = read_listen_config(ini_config)
     if zmq_address is None:
@@ -236,6 +255,16 @@ def run_analysis_stream_zmq(
         prefix = prefix.encode()
 
     dispatcher = PDFAnalysisDispatcher(beamline_acronym, ini_config)
+
+    if publish:
+        publish_host, publish_prefix = read_publish_config(ini_config)
+        publisher = Publisher(publish_host, prefix=publish_prefix)
+        dispatcher.subscribe(publisher)
+        print(
+            f"\n Publish reduced documents to {publish_host} "
+            f"(prefix={publish_prefix!r}) \n"
+        )
+
     for subscriber in subscribers or ():
         dispatcher.subscribe(subscriber)
 

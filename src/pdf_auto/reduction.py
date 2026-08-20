@@ -1,7 +1,6 @@
 import os
 
 from diffpy.pdfgetx import PDFConfig
-from pdfstream.transformation.io import write_pdfgetter
 from pdfstream.transformation.main import get_pdf
 
 # from diffpy.pdfgetx.pdfgetter import PDFConfigError
@@ -68,8 +67,32 @@ class PDFReducer(integration.ImageIntegrator):
 
         return p
 
+    @property
+    def pdfgetter_prefix(self):
+        """Filename prefix (with treatment suffix) for the PDFgetX products.
+
+        Mirrors the suffix logic of
+        :meth:`pdf_auto.image_processing.ImageData2D.output_data_path`:
+        ``_sum`` for stitched pilatus, ``_flat`` for flat-fielded pe1c, and
+        ``_sub`` otherwise. Returned as a plain string so the value can be
+        published and used by :class:`pdf_auto.save_data.SaveData`.
+        """
+        if "pilatus" in self.detector:
+            return f"{self.file_name_prefix}_sum"
+
+        if "pe1" in self.detector and self.use_flat_field_pe1c:
+            return f"{self.file_name_prefix}_flat"
+
+        return f"{self.file_name_prefix}_sub"
+
     ## Modified from https://github.com/NSLS2/xpd-profile-collection-ldrd20-31/blob/main/scripts/_get_pdf.py
-    def transform_bkg(self, iq_df, test=False):
+    def compute_pdfgetter(self, iq_df):
+        """Run the PDFgetX transformation and return the pdfgetter (no write).
+
+        Returns ``(pdfgetter, process_det_dir, pdfgetter_prefix)`` so that
+        :class:`pdf_auto.save_data.SaveData` can call ``write_pdfgetter`` to
+        persist the S(Q)/F(Q)/G(r) files. This method performs no file I/O.
+        """
 
         try:
             # self.pdfconfig().composition = self.run.start['composition_string']
@@ -86,32 +109,8 @@ class PDFReducer(integration.ImageIntegrator):
         # print(self.pdfconfig())
 
         pdfgetter = get_pdf(self.pdfconfig(), iq_df, plot_setting="OFF")
-        # sqfqgr_path = ''
 
-        if "pilatus" in self.detector:
-            sqfqgr_path = write_pdfgetter(
-                self.process_det_dir, f"{self.file_name_prefix}_sum", pdfgetter
-            )
-
-        elif "pe1" in self.detector:
-            if (self.use_flat_field_pe1c) and ("pe1" in self.detector):
-                sqfqgr_path = write_pdfgetter(
-                    self.process_det_dir, f"{self.file_name_prefix}_flat", pdfgetter
-                )
-            else:
-                sqfqgr_path = write_pdfgetter(
-                    self.process_det_dir, f"{self.file_name_prefix}_sub", pdfgetter
-                )
-
-        else:
-            sqfqgr_path = write_pdfgetter(
-                self.process_det_dir, f"{self.file_name_prefix}_sub", pdfgetter
-            )
-
-        # if not test:
-        #     plt.show()
-
-        return sqfqgr_path
+        return pdfgetter, self.process_det_dir, self.pdfgetter_prefix
 
     def get_gr(self, iq_df):
 
@@ -161,11 +160,9 @@ class PDFReducer(integration.ImageIntegrator):
             # self.backgroundfile = '/home/xf28id1/Documents/chenghung/B_Empty_Kapton_last_PDF_20250730-053726_6070e6_primary-1_mean_q.chi'
 
         iq_array = iq_df.to_numpy().T
-        sqfqgr_path = self.transform_bkg(iq_array, self.process_det_dir)
-
-        print(f"\n*** {os.path.basename(sqfqgr_path['gr'])} saved!! ***\n")
-
-        return sqfqgr_path
+        # Compute the pdfgetter and return it with its target dir + prefix.
+        # Writing S(Q)/F(Q)/G(r) is deferred to pdf_auto.save_data.SaveData.
+        return self.compute_pdfgetter(iq_array)
 
 
 # Backward-compatible name used by earlier beamline scripts.

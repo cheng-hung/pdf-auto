@@ -89,3 +89,58 @@ def analysis_main(argv: Sequence[str] | None = None) -> int:
     if not any(arg == "--mode" or arg.startswith("--mode=") for arg in argv):
         argv = [*argv, "--mode", "analysis"]
     return main(argv)
+
+
+def build_save_parser() -> argparse.ArgumentParser:
+    """Build the ``pdf-save`` parser without initializing beamline services.
+
+    Unlike the reduction workflows, SaveData needs no beamline acronym: it only
+    subscribes to the published ``reduced`` ZMQ stream defined by ``[PUBLISH
+    TO]`` in the INI.
+    """
+    parser = argparse.ArgumentParser(
+        prog="pdf-save",
+        description=(
+            "Run the SaveData callback against the published 'reduced' "
+            "ZMQ stream, writing tiff/iq/tth/sq/fq/gr files."
+        ),
+    )
+    parser.add_argument(
+        "--config",
+        type=Path,
+        default=DEFAULT_CONFIG_PATH,
+        help=f"INI configuration path (default: {DEFAULT_CONFIG_PATH}).",
+    )
+    parser.add_argument(
+        "--host",
+        default=None,
+        help=(
+            "ZMQ proxy output socket to subscribe to. Overrides the "
+            "[PUBLISH TO] host in the INI when given."
+        ),
+    )
+    parser.add_argument(
+        "--prefix",
+        default=None,
+        help=(
+            "RemoteDispatcher prefix filter. Overrides the [PUBLISH TO] "
+            "prefix in the INI when given."
+        ),
+    )
+    return parser
+
+
+def save_main(argv: Sequence[str] | None = None) -> int:
+    """Console-script entry point for the ``pdf-save`` SaveData subscriber."""
+    args = build_save_parser().parse_args(argv)
+
+    # Import lazily so package inspection and ``--help`` stay free of the
+    # beamline-only deps (bluesky/pdfstream/tifffile).
+    from .save_data import run_save_data_zmq
+
+    run_save_data_zmq(
+        ini_config=str(args.config),
+        host=args.host,
+        prefix=args.prefix,
+    )
+    return 0

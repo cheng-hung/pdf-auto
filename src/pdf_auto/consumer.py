@@ -13,6 +13,7 @@ from tiled.client import from_profile
 from . import plotting, reduction
 from .config import DEFAULT_CONFIG_PATH
 from .routing import is_dark_start, should_process_start
+from .save_data import SaveData
 from .utilities import ServerState
 
 "--------------------------USER INPUTS------------------------------"
@@ -119,7 +120,10 @@ class ProcessingFactory:
             print(
                 f"\nStart to process {self.img_analyzer.run.start['detectors'][0]} data: uid = {self.img_analyzer.uid}\n"
             )
-            self.img_analyzer.save_processed_image()
+            # The reducer is now compute-only; file writing is delegated to
+            # SaveData so the Kafka path stays consistent with the analysis
+            # stream. Build the same reduced payload and hand it to SaveData.
+            process_img, tiff_fn = self.img_analyzer.compute_processed_image()
             poni_name, mask_name = self.img_analyzer.poni_mask_fn
             print(f"\nApply {mask_name = }\n")
 
@@ -134,8 +138,20 @@ class ProcessingFactory:
 
             ## pyFai integration: 2D to 1Dcolor_str
             print(f"\nStart to do 2D integration: uid = {self.img_analyzer.uid}\n")
-            iq_df, iq_fn, unrolled_array = self.img_analyzer.pct_integration()
-            # img_tuner4 = plotter.plot_tiff4(unrolled_array, iq_df.iloc[:,0])
+            iq_df, tth_df, integration_md, iq_fn, tth_fn, unrolled_array = (
+                self.img_analyzer.pct_integration()
+            )
+
+            reduced_data = {
+                "img_file": tiff_fn,
+                "image": process_img,
+                "iq_file": iq_fn,
+                "tth_file": tth_fn,
+                "q": iq_df["q"].to_numpy(),
+                "iq": iq_df["I"].to_numpy(),
+                "tth": tth_df["tth"].to_numpy(),
+                "integration_md": integration_md,
+            }
 
             ## Plot masked 2D image rings with iq data
             maskImg_iq_tuner = plotter.plot_maskImg_iq(
@@ -153,20 +169,28 @@ class ProcessingFactory:
             # tiff4_tuner4()
 
             ## Data reduction: I(Q) to G(r)
-            if (self.img_analyzer.do_reduction) and (
+            is_pdf = self.img_analyzer.do_reduction and (
                 self.img_analyzer.acq_mode == "PDF"
-            ):
-                # if img_analyzer.acq_mode=='PDF':
+            )
+            if is_pdf:
                 print(f"\nStart to reduce sq, fq, gr: uid = {self.img_analyzer.uid}\n")
-                # iq_array = iq_df.to_numpy().T
-                sqfqgr_path = self.img_analyzer.get_gr(iq_df)
+                pdfgetter, pdf_dir, pdf_prefix = self.img_analyzer.get_gr(iq_df)
+                reduced_data["pdfgetter"] = pdfgetter
+                reduced_data["pdfgetter_dir"] = pdf_dir
+                reduced_data["pdfgetter_prefix"] = pdf_prefix
                 bkg_scale = self.img_analyzer.pdfconfig().bgscale[0]
                 bkg_fn = self.img_analyzer.pdfconfig_dict["backgroundfile"]
-                plotter.plot_sqfqgr(sqfqgr_path, bkg_scale, bkg_fn)
+            else:
+                print("This is an XRD scan. Skip gr transformation.")
 
+            # Write all products (tiff/iq/tth/sq/fq/gr) via SaveData, which
+            # returns the written S(Q)/F(Q)/G(r) paths for plotting.
+            sqfqgr_path = SaveData().save(reduced_data)
+
+            if is_pdf:
+                plotter.plot_sqfqgr(sqfqgr_path, bkg_scale, bkg_fn)
             else:
                 plotter.clear_sqfqgr()
-                print("This is an XRD scan. Skip gr transformation.")
 
             self.factory_log.color_str = plotter.color_str
 

@@ -332,20 +332,20 @@ class ImageIntegrator(image_processing.ImageData2D):
         iq_fn = self.output_data_path(sub_name="iq", file_type="iq")
         tth_fn = self.output_data_path(sub_name="tth", file_type="xy")
 
-        os.makedirs(
-            os.path.dirname(iq_fn), exist_ok=True
-        )  # Create process_iq_dir directory if it doesn't exis
-        os.makedirs(
-            os.path.dirname(tth_fn), exist_ok=True
-        )  # Create process_tth_dir directory if it doesn't exis
+        # File I/O is deferred to :class:`pdf_auto.save_data.SaveData`. Record
+        # the number of header rows the saver will write so downstream code
+        # (e.g. auto-background) can skip them consistently.
+        self.num_rows_header = 1 + len(md)
 
-        ## num_row will be the number of rows of the header in saved iq data file
-        self.num_rows_header = iq_saver(iq_fn, iq_df, md)
-        iq_saver(tth_fn, iq_df10, md, header=["#tth", "I(q)"])
-        print(f"\n*** {os.path.basename(iq_fn)} saved!! ***\n")
-        print(f"\n*** {os.path.basename(tth_fn)} saved!! ***\n")
-
-        return iq_df, iq_fn, outlier_mask_2d_masked
+        # Return everything SaveData needs to write the .iq/.xy files plus the
+        # in-memory results used for reduction and publishing:
+        #   iq_df   - q/I dataframe (used by get_gr and published)
+        #   tth_df  - two-theta/I dataframe (published + written to .xy)
+        #   md      - header metadata dict shared by both files
+        #   iq_fn   - target path for the I(Q) file
+        #   tth_fn  - target path for the two-theta file
+        #   masked  - the percentile-filtered 2D cake (published for plotting)
+        return iq_df, iq_df10, md, iq_fn, tth_fn, outlier_mask_2d_masked
 
 
 # Backward-compatible name used by earlier beamline scripts.

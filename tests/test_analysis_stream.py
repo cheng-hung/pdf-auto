@@ -1,3 +1,5 @@
+import numpy as np
+
 from pdf_auto.analysis_stream import (
     ANALYSIS_STREAM_NAME,
     analysis_data_keys,
@@ -40,21 +42,26 @@ def test_event_data_skips_empty_paths_and_none_scalars() -> None:
     assert data["temperature"] == 300.0
 
 
-def test_event_data_never_embeds_arrays() -> None:
+def test_event_data_embeds_inline_arrays() -> None:
+    image = np.zeros((4, 4))
+    q = np.arange(5.0)
     data = analysis_event_data(
         raw_uid="u",
         acq_mode="PDF",
         sample_name="s",
         detector="d",
-        output_paths={"iq": "/x/a.iq"},
-        scalars={"stitched": True, "bgscale": 0.98},
+        output_paths={"img": "/x/a.tiff", "iq": "/x/a.iq"},
+        scalars={"stitched": True},
+        arrays={"image": image, "q": q, "empty": None},
     )
-    # Every value must be a path string or a plain scalar; no arrays/objects.
-    for value in data.values():
-        assert isinstance(value, (str, int, float, bool))
+    assert data["img_file"] == "/x/a.tiff"
+    np.testing.assert_array_equal(data["image"], image)
+    np.testing.assert_array_equal(data["q"], q)
+    # None-valued arrays are skipped.
+    assert "empty" not in data
 
 
-def test_data_keys_dtypes() -> None:
+def test_data_keys_dtypes_for_scalars_and_arrays() -> None:
     data = analysis_event_data(
         raw_uid="u",
         acq_mode="PDF",
@@ -62,10 +69,16 @@ def test_data_keys_dtypes() -> None:
         detector="d",
         output_paths={"iq": "/x/a.iq"},
         scalars={"stitched": True, "bgscale": 0.98, "npt": 4096},
+        arrays={"image": np.zeros((3, 2)), "q": np.arange(5.0)},
     )
     keys = analysis_data_keys(data)
     assert keys["iq_file"]["dtype"] == "string"
     assert keys["stitched"]["dtype"] == "boolean"
     assert keys["bgscale"]["dtype"] == "number"
     assert keys["npt"]["dtype"] == "number"
-    assert all(k["shape"] == [] for k in keys.values())
+    assert keys["image"]["dtype"] == "array"
+    assert keys["image"]["shape"] == [3, 2]
+    assert keys["q"]["dtype"] == "array"
+    assert keys["q"]["shape"] == [5]
+    # Scalars/strings keep empty shape.
+    assert keys["iq_file"]["shape"] == []

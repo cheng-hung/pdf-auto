@@ -27,6 +27,17 @@ def test_pixi_analysis_task_launches_analysis_mode() -> None:
     assert task["env"]["MPLBACKEND"] == "qtagg"
 
 
+def test_pixi_save_task_launches_save_subcommand() -> None:
+    with (REPOSITORY_ROOT / "pixi.toml").open("rb") as stream:
+        pixi_config = tomllib.load(stream)
+
+    task = pixi_config["tasks"]["pdf-save"]
+
+    assert task["cmd"] == "python -m pdf_auto save"
+    assert task["env"]["PYTHONPATH"].endswith("/pdf-auto/src")
+    assert task["env"]["MPLBACKEND"] == "qtagg"
+
+
 def test_pixi_uses_one_default_environment() -> None:
     with (REPOSITORY_ROOT / "pixi.toml").open("rb") as stream:
         pixi_config = tomllib.load(stream)
@@ -72,3 +83,12 @@ def test_default_ini_declares_listen_to_section() -> None:
     assert parser.has_section("LISTEN TO")
     assert parser.get("LISTEN TO", "zmq_address")
     assert parser.get("LISTEN TO", "prefix") == "raw"
+
+
+def test_default_ini_declares_publish_to_section() -> None:
+    parser = ConfigParser()
+    parser.read(REPOSITORY_ROOT / "pdf_auto_config.ini")
+
+    assert parser.has_section("PUBLISH TO")
+    assert parser.get("PUBLISH TO", "host")
+    assert parser.get("PUBLISH TO", "prefix") == "reduced"

@@ -1,6 +1,5 @@
 import numpy as np
 import pytest
-import tifffile
 
 from pdf_auto.image_processing import (
     ImageData2D,
@@ -146,14 +145,16 @@ def test_missing_dark_returns_raw_image(tmp_path) -> None:
     np.testing.assert_array_equal(result, raw)
 
 
-def test_save_processed_image_uses_sub_suffix(tmp_path) -> None:
+def test_compute_processed_image_uses_sub_suffix(tmp_path) -> None:
     processor, raw = make_processor(tmp_path)
 
-    processor.save_processed_image()
-    output_path = processor.output_data_path("img", "tiff")
+    image, output_path = processor.compute_processed_image()
 
+    # compute_processed_image is now compute-only: it returns the array and the
+    # intended path without writing a file (SaveData is the writer).
     assert output_path.endswith("_sub.tiff")
-    np.testing.assert_array_equal(tifffile.imread(output_path), raw - 2.0)
+    np.testing.assert_array_equal(image, raw - 2.0)
+    np.testing.assert_array_equal(processor.process_img, raw - 2.0)
 
 
 def test_output_suffix_describes_processing(tmp_path) -> None:
@@ -209,4 +210,3 @@ def test_legacy_image_class_names_are_compatible() -> None:
 def test_legacy_image_method_names_are_compatible() -> None:
     assert ImageData2D.sum_pilatus2 is ImageData2D.stitch_images
     assert ImageData2D.sub_dk_img is ImageData2D.subtract_dark
-    assert ImageData2D.save_processed_img is ImageData2D.save_processed_image
