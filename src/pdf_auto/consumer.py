@@ -174,8 +174,8 @@ class ProcessingFactory:
             )
             if is_pdf:
                 print(f"\nStart to reduce sq, fq, gr: uid = {self.img_analyzer.uid}\n")
-                pdfgetter, pdf_dir, pdf_prefix = self.img_analyzer.get_gr(iq_df)
-                reduced_data["pdfgetter"] = pdfgetter
+                pdf_arrays, pdf_dir, pdf_prefix = self.img_analyzer.get_gr(iq_df)
+                reduced_data["pdf_arrays"] = pdf_arrays
                 reduced_data["pdfgetter_dir"] = pdf_dir
                 reduced_data["pdfgetter_prefix"] = pdf_prefix
                 bkg_scale = self.img_analyzer.pdfconfig().bgscale[0]

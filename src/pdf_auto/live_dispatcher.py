@@ -224,14 +224,17 @@ class PDFAnalysisDispatcher(LiveDispatcher):
         if analyzer.do_reduction and analyzer.acq_mode == "PDF":
             print("[STEP 4/4] PDF acquisition: PDFgetX reduction (S/F/G)...\n",
                   flush=True)
-            pdfgetter, pdf_dir, pdf_prefix = analyzer.get_gr(iq_df)
-            arrays["pdfgetter"] = pdfgetter
+            # Publish the pdfgetter *output arrays* (picklable), not the live
+            # PDFGetter object, so the reduced event survives ZMQ pickling.
+            pdf_arrays, pdf_dir, pdf_prefix = analyzer.get_gr(iq_df)
+            arrays["pdf_arrays"] = pdf_arrays
             arrays["pdfgetter_dir"] = pdf_dir
             arrays["pdfgetter_prefix"] = pdf_prefix
             scalars["bgscale"] = float(analyzer.pdfconfig().bgscale[0])
             scalars["backgroundfile"] = analyzer.pdfconfig_dict["backgroundfile"]
             print(
                 f"[STEP 4/4] PDF reduction ready (prefix={pdf_prefix}, "
+                f"types={sorted(pdf_arrays)}, "
                 f"bgscale={scalars['bgscale']:.4f}).\n",
                 flush=True,
             )

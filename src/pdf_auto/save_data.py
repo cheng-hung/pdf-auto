@@ -18,9 +18,14 @@ SaveData is the sole writer. It can be used two ways:
 - driven later from the published ``reduced`` ZMQ stream via
   :func:`run_save_data_zmq`.
 
-Beamline-only: ``write_pdfgetter`` (pdfstream) and ``tifffile`` are imported at
-top level, so this module belongs to the ``beamline`` extra. The pure payload
-shape lives in :mod:`pdf_auto.analysis_stream`.
+Payloads are fully picklable (numpy arrays + paths + scalars); the live diffpy
+``PDFGetter`` object is never sent over ZMQ (it may not survive ``pickle`` and
+would cause :class:`~bluesky.callbacks.zmq.RemoteDispatcher` to silently drop the
+event). The dispatcher extracts the pdfgetter output arrays; SaveData writes them.
+
+Beamline-only: ``tifffile`` is imported at top level, so this module belongs to
+the ``beamline`` extra. The pure payload shape lives in
+:mod:`pdf_auto.analysis_stream`.
 """
 
 from __future__ import annotations
@@ -29,11 +34,11 @@ import os
 from collections.abc import Callable, Iterable
 from configparser import ConfigParser
 
+import numpy as np
 import pandas as pd
 import tifffile
 from bluesky.callbacks.core import CallbackBase
 from bluesky.callbacks.zmq import RemoteDispatcher
-from pdfstream.transformation.io import write_pdfgetter
 
 from .config import DEFAULT_CONFIG_PATH
 
@@ -84,6 +89,27 @@ def write_iq_file(fn, df, md, header=("#q_A^-1", "I(q)")):
         sep=" ",
     )
     return num_row
+
+
+def write_pdf_arrays(saving_dir: str, prefix: str, pdf_arrays: dict) -> dict:
+    """Write S(Q)/F(Q)/G(r) (and I(Q)) files from plain (2, N) arrays.
+
+    Reproduces the on-disk layout of ``pdfstream.transformation.io``'s
+    ``write_pdfgetter`` -- one subdirectory per output type, files named
+    ``<prefix>.<out_type>`` -- but from picklable numpy arrays instead of a live
+    ``PDFGetter`` object. ``pdf_arrays`` maps each ``out_type`` (``iq``/``sq``/
+    ``fq``/``gr``) to a ``(2, N)`` array of ``[x, y]``. Returns ``{out_type:
+    path}`` like ``write_pdfgetter``.
+    """
+    paths: dict = {}
+    for out_type, xy in pdf_arrays.items():
+        out_dir = os.path.join(saving_dir, out_type)
+        os.makedirs(out_dir, exist_ok=True)
+        out_file = os.path.join(out_dir, f"{prefix}.{out_type}")
+        xy = np.asarray(xy)
+        np.savetxt(out_file, xy.T)
+        paths[out_type] = out_file
+    return paths
 
 
 class SaveData(CallbackBase):
@@ -154,15 +180,19 @@ class SaveData(CallbackBase):
 
     @staticmethod
     def _save_pdf(data: dict) -> dict:
-        pdfgetter = data.get("pdfgetter")
+        pdf_arrays = data.get("pdf_arrays")
         target_dir = data.get("pdfgetter_dir")
         prefix = data.get("pdfgetter_prefix")
-        if pdfgetter is None or not target_dir or not prefix:
+        if not pdf_arrays or not target_dir or not prefix:
             print("\n*** No PDF (S/F/G) products to save. ***\n", flush=True)
             return {}
         os.makedirs(target_dir, exist_ok=True)
-        sqfqgr_path = write_pdfgetter(target_dir, prefix, pdfgetter)
-        print(f"\n*** {os.path.basename(sqfqgr_path['gr'])} saved!! ***\n", flush=True)
+        sqfqgr_path = write_pdf_arrays(target_dir, prefix, pdf_arrays)
+        for out_type, path in sqfqgr_path.items():
+            print(
+                f"\n*** {out_type}: {os.path.basename(path)} saved!! ***\n",
+                flush=True,
+            )
         return sqfqgr_path
 
 
@@ -187,7 +217,10 @@ def run_save_data_zmq(
     elif isinstance(prefix, str):
         prefix = prefix.encode()
 
-    rd = RemoteDispatcher(host, prefix=prefix)
+    # strict=True so any deserialization failure raises loudly instead of the
+    # message being silently dropped on the floor (the failure mode that hid an
+    # unpicklable payload before). The reduced stream is now plain arrays/paths.
+    rd = RemoteDispatcher(host, prefix=prefix, strict=True)
     rd.subscribe(SaveData())
     for subscriber in extra_subscribers or ():
         rd.subscribe(subscriber)

@@ -85,13 +85,36 @@ class PDFReducer(integration.ImageIntegrator):
 
         return f"{self.file_name_prefix}_sub"
 
+    @staticmethod
+    def pdfgetter_arrays(pdfgetter) -> dict:
+        """Extract the (x, y) output arrays from a diffpy ``PDFGetter``.
+
+        Returns ``{out_type: numpy.ndarray of shape (2, N)}`` for each type in
+        ``pdfgetter.config.outputtypes`` (a subset of ``iq``/``sq``/``fq``/
+        ``gr``). These plain numpy arrays are picklable and survive ZMQ, unlike
+        the ``PDFGetter`` object itself, which may hold non-picklable state and
+        silently break :class:`bluesky.callbacks.zmq.RemoteDispatcher`
+        deserialization. :class:`pdf_auto.save_data.SaveData` writes the files
+        from these arrays.
+        """
+        import numpy as np
+
+        arrays: dict = {}
+        for out_type in pdfgetter.config.outputtypes:
+            x, y = getattr(pdfgetter, out_type)
+            arrays[out_type] = np.vstack([np.asarray(x), np.asarray(y)])
+        return arrays
+
     ## Modified from https://github.com/NSLS2/xpd-profile-collection-ldrd20-31/blob/main/scripts/_get_pdf.py
     def compute_pdfgetter(self, iq_df):
-        """Run the PDFgetX transformation and return the pdfgetter (no write).
+        """Run the PDFgetX transformation and return picklable output arrays.
 
-        Returns ``(pdfgetter, process_det_dir, pdfgetter_prefix)`` so that
-        :class:`pdf_auto.save_data.SaveData` can call ``write_pdfgetter`` to
-        persist the S(Q)/F(Q)/G(r) files. This method performs no file I/O.
+        Returns ``(pdf_arrays, process_det_dir, pdfgetter_prefix)`` where
+        ``pdf_arrays`` is ``{out_type: (2, N) ndarray}`` (see
+        :meth:`pdfgetter_arrays`). :class:`pdf_auto.save_data.SaveData` writes
+        the ``.sq``/``.fq``/``.gr`` files from these arrays. This method
+        performs no file I/O and never returns the live ``PDFGetter`` object, so
+        the published ``reduced`` event stays fully picklable across ZMQ.
         """
 
         try:
@@ -110,7 +133,11 @@ class PDFReducer(integration.ImageIntegrator):
 
         pdfgetter = get_pdf(self.pdfconfig(), iq_df, plot_setting="OFF")
 
-        return pdfgetter, self.process_det_dir, self.pdfgetter_prefix
+        return (
+            self.pdfgetter_arrays(pdfgetter),
+            self.process_det_dir,
+            self.pdfgetter_prefix,
+        )
 
     def get_gr(self, iq_df):
 
