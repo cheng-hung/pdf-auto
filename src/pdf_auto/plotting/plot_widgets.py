@@ -25,6 +25,7 @@ class PlotTunerBase:
         self.ax2 = None
         self.ax3 = None
         self.img = img
+        self.button_step = np.max(img)/2
         self.vmax = np.round(np.nanpercentile(img, 98), decimals=2)
         self.slider_max = self.vmax + 500
         self.vmin = np.round(np.nanpercentile(img, 10), decimals=2)
@@ -40,7 +41,7 @@ class PlotTunerBase:
             self.slider_ax, "color_scale", self.slider_min, self.slider_max
         )
 
-        ## Creat buttons
+        ## Create buttons
         self.axplus = self.fig.add_axes([0.02, 0.9, 0.04, 0.05])
         self.axminus = self.fig.add_axes([0.02, 0.8, 0.04, 0.05])
         self.bplus = Button(self.axplus, "M+")
@@ -94,7 +95,7 @@ class PlotTunerBase:
         self.fig.canvas.draw_idle()
 
     def vmax_plus(self, event):
-        self.slider_max += 100
+        self.slider_max += self.button_step
         self.im1.norm.vmax = self.slider_max
 
         try:
@@ -114,7 +115,7 @@ class PlotTunerBase:
         self.slider.on_changed(self.update)
 
     def vmax_minus(self, event):
-        self.slider_max -= 100
+        self.slider_max -= self.button_step
         self.im1.norm.vmax = self.slider_max
 
         try:
@@ -136,7 +137,7 @@ class PlotTunerBase:
         self.slider.on_changed(self.update)
 
     def vmin_plus(self, event):
-        self.slider_min += 100
+        self.slider_min += self.button_step
         self.im1.norm.vmin = self.slider_min
 
         try:
@@ -157,7 +158,7 @@ class PlotTunerBase:
         self.slider.on_changed(self.update)
 
     def vmin_minus(self, event):
-        self.slider_min -= 100
+        self.slider_min -= self.button_step
         self.im1.norm.vmin = self.slider_min
 
         try:
