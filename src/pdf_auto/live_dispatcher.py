@@ -228,12 +228,17 @@ class PDFAnalysisDispatcher(LiveDispatcher):
         scalars: dict[str, object] = {
             "poni_file": os.path.basename(poni_name),
             "mask_file": os.path.basename(mask_name),
+            # Full paths for the plotting callback (basenames above are kept for
+            # SaveData's file headers/metadata).
+            "poni_path": poni_name,
             "stitched": analyzer.stream_length == analyzer.num_positions,
         }
-        # Reduced arrays carried inline for SaveData (and plotting later).
+        # Reduced arrays carried inline for SaveData and the plotting callback
+        # (so plotting needs no filesystem access to the raw products).
         arrays: dict[str, object] = {
             "image": process_img,
             "cake": cake,
+            "mask": analyzer.mask_array,
             "q": iq_df["q"].to_numpy(),
             "iq": iq_df["I"].to_numpy(),
             "tth": tth_df["tth"].to_numpy(),

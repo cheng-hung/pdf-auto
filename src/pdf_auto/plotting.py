@@ -84,7 +84,15 @@ class ImagePlotter(OpenFigures):
         return img_tuner
 
     def plot_maskImg_iq(
-        self, img, mask, unrolled_array, iq_fn, poni_fn, aspect=None, binning=1
+        self,
+        img,
+        mask,
+        unrolled_array,
+        iq_fn,
+        poni_fn,
+        aspect=None,
+        binning=1,
+        iq_df=None,
     ):
         plt.ion()
 
@@ -94,9 +102,12 @@ class ImagePlotter(OpenFigures):
         except (IndexError, KeyError):
             f = plt.figure(self.fig[-1])
 
-        iq_df = pd.read_csv(
-            iq_fn, names=["q", "I(q)"], sep=" ", skiprows=get_header_rows(iq_fn)
-        )
+        # Prefer an in-memory dataframe (from the reduced stream) over reading
+        # the .iq file back; fall back to the file for the legacy callers.
+        if iq_df is None:
+            iq_df = pd.read_csv(
+                iq_fn, names=["q", "I(q)"], sep=" ", skiprows=get_header_rows(iq_fn)
+            )
 
         f.clear()
         # plt.clf()
@@ -210,6 +221,49 @@ class ImagePlotter(OpenFigures):
             f.canvas.manager.show()
             f.canvas.flush_events()
             # f.canvas.draw_idle()
+
+    def plot_sqfqgr_arrays(self, pdf_arrays, title=None):
+        """Plot S(Q)/F(Q)/G(r) from inline ``{out_type: (2, N) array}`` data.
+
+        Array-based sibling of :meth:`plot_sqfqgr` for the plotting callback:
+        it takes the reduced arrays already in memory (no file read / no race
+        with SaveData). ``pdf_arrays`` maps ``"sq"``/``"fq"``/``"gr"`` to a
+        ``(2, N)`` array of ``[x, y]``.
+        """
+        plt.ion()
+
+        keys = ["sq", "fq", "gr"]
+        xlabel = ["q (A-1)", "q (A-1)", "r (A)"]
+        ylabel = ["S(q)", "f(q)", "g(r)"]
+
+        for i, key in enumerate(keys):
+            xy = pdf_arrays.get(key)
+            if xy is None:
+                continue
+
+            try:
+                f = self.fig_dict[self.fig[i + 2]]
+            except (IndexError, KeyError):
+                f = plt.figure(self.fig[-1])
+
+            xy = np.asarray(xy)
+            ax = f.gca()
+            ax.clear()
+
+            for spine in ax.spines.values():
+                spine.set_linewidth(self.spine_width)
+
+            ax.plot(xy[0], xy[1], label=self.sample_name, color=self.color_str)
+
+            if title is not None:
+                ax.set_title(title, prop=self.title_prop)
+
+            ax.set_xlabel(xlabel[i], fontdict=self.xylabel_prop)
+            ax.set_ylabel(ylabel[i], fontdict=self.xylabel_prop)
+            ax.legend(prop=self.legend_prop)
+
+            f.canvas.manager.show()
+            f.canvas.flush_events()
 
     def clear_sqfqgr(self):
 

@@ -144,3 +144,57 @@ def save_main(argv: Sequence[str] | None = None) -> int:
         prefix=args.prefix,
     )
     return 0
+
+
+def build_plot_parser() -> argparse.ArgumentParser:
+    """Build the ``pdf-plot`` parser without initializing beamline services.
+
+    Like ``pdf-save``, PlotData only subscribes to the published ``reduced``
+    ZMQ stream defined by ``[PUBLISH TO]`` in the INI; no beamline acronym.
+    """
+    parser = argparse.ArgumentParser(
+        prog="pdf-plot",
+        description=(
+            "Run the PlotData callback against the published 'reduced' "
+            "ZMQ stream, drawing image/I(Q)/S(Q)/F(Q)/G(r) figures."
+        ),
+    )
+    parser.add_argument(
+        "--config",
+        type=Path,
+        default=DEFAULT_CONFIG_PATH,
+        help=f"INI configuration path (default: {DEFAULT_CONFIG_PATH}).",
+    )
+    parser.add_argument(
+        "--host",
+        default=None,
+        help=(
+            "ZMQ proxy output socket to subscribe to. Overrides the "
+            "[PUBLISH TO] subscribe_host in the INI when given."
+        ),
+    )
+    parser.add_argument(
+        "--prefix",
+        default=None,
+        help=(
+            "RemoteDispatcher prefix filter. Overrides the [PUBLISH TO] "
+            "prefix in the INI when given."
+        ),
+    )
+    return parser
+
+
+def plot_main(argv: Sequence[str] | None = None) -> int:
+    """Console-script entry point for the ``pdf-plot`` PlotData subscriber."""
+    args = build_plot_parser().parse_args(argv)
+
+    # Import lazily so package inspection and ``--help`` stay free of the
+    # beamline-only deps (bluesky/pyFAI/matplotlib GUI).
+    from .plot_callback import run_plot_zmq
+
+    run_plot_zmq(
+        ini_config=str(args.config),
+        host=args.host,
+        prefix=args.prefix,
+    )
+    return 0
