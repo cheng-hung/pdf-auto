@@ -44,8 +44,9 @@ import off-beamline:
 
 Off-beamline-safe modules (imported by the offline tests): `cli.py`,
 `routing.py`, `utilities.py`, `image_processing.py`, `config.py`,
-`analysis_stream.py`. Keep new importable-anywhere logic in these; keep beamline
-imports isolated to the modules above so the offline suite stays green.
+`analysis_stream.py`, `qt_kicker.py` (Matplotlib/Qt imported lazily inside the
+function). Keep new importable-anywhere logic in these; keep beamline imports
+isolated to the modules above so the offline suite stays green.
 
 - `cli.py` must stay import-safe: it imports beamline runners **lazily inside
   the mode branch** (`main`/`save_main`), never at module top. Tests import

@@ -152,6 +152,14 @@ def run_plot_zmq(
     with a display; the Pixi ``pdf-plot`` task sets this.
     """
     import matplotlib.pyplot as plt
+    from bluesky.callbacks.mpl_plotting import initialize_qt_teleporter
+
+    from .qt_kicker import install_qt_kicker
+
+    # Initialize the Qt 'teleporter' on the main thread up front so PlotData
+    # (a QtAwareCallback) can safely hand documents to the GUI thread even
+    # though RemoteDispatcher processes them from its background asyncio thread.
+    initialize_qt_teleporter()
 
     _publish_host, subscribe_host, ini_prefix = read_publish_config(ini_config)
     if host is None:
@@ -168,6 +176,14 @@ def run_plot_zmq(
     # strict=True so any deserialization failure raises loudly instead of being
     # silently dropped.
     rd = RemoteDispatcher(host, prefix=prefix, strict=True)
+
+    # CRITICAL for interactivity: rd.start() blocks the main thread in the
+    # asyncio loop, so the Qt event loop never runs on its own and Matplotlib
+    # widgets (sliders/buttons) stay unresponsive. install_qt_kicker schedules a
+    # periodic callback on the asyncio loop that pumps Qt GUI events, keeping the
+    # tuners interactive. This mirrors consumer.run_zmq_server.
+    install_qt_kicker(rd.loop)
+
     rd.subscribe(PlotData())
     for subscriber in extra_subscribers or ():
         rd.subscribe(subscriber)
