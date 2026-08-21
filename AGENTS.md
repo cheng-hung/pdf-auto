@@ -10,6 +10,13 @@ agent-specific gotchas.
 > **This branch has no Kafka.** The old Kafka file-writing consumer
 > (`consumer.py`) was removed; that version lives on another branch. Do not
 > re-add `bluesky-kafka`/`nslsii` or a `consumer.py` here.
+>
+> **Keep `databroker` in the deps.** It has no direct import, but it registers
+> Tiled's BlueskyRun structure clients so `from_profile('pdf')[uid]` returns a
+> `BlueskyRun` with `.start`/`.stop`/`.<stream>` — which `ImageData2D` relies on
+> (`self.run.start[...]`). Without it Tiled returns bare `Container`s and the
+> reducer raises `AttributeError: 'Container' object has no attribute 'start'`.
+> (`nslsii` used to pull it in transitively; dropping `nslsii` dropped it.)
 
 ## Environment reality vs. deployment target
 

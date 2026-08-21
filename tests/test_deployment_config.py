@@ -62,6 +62,9 @@ def test_pixi_declares_active_runtime_dependencies() -> None:
     dependencies = set(pixi_config["dependencies"])
     assert {
         "bluesky-base",
+        # databroker provides Tiled's BlueskyRun structure clients (the
+        # reducer needs run.start/.stop); do not drop it with nslsii.
+        "databroker",
         "event-model",
         "matplotlib-base",
         "numpy",

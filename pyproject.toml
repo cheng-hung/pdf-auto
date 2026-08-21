@@ -28,6 +28,9 @@ dependencies = [
 [project.optional-dependencies]
 beamline = [
     "bluesky",
+    # databroker registers Tiled's BlueskyRun structure clients so that
+    # from_profile(...)[uid] yields a BlueskyRun with .start/.stop accessors.
+    "databroker",
     "diffpy.pdfgetx",
     "event-model",
     "pdfstream",

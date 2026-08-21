@@ -10,6 +10,11 @@ libc = "2.17"
 [dependencies]
 python = ">=3.12,<3.13"
 bluesky-base = "==1.15.0"
+# databroker registers Tiled's BlueskyRun structure clients, so that
+# from_profile('pdf')[uid] returns a BlueskyRun with .start/.stop/.<stream>
+# accessors that the reducer relies on. Without it, Tiled returns bare
+# Containers and ImageData2D fails on ``self.run.start``.
+databroker = "*"
 event-model = "*"
 ipython = ">=9.5"
 matplotlib-base = ">=3.10,<4"
