@@ -585,7 +585,7 @@ class ThreeSubTuner(PlotTunerBase):
             ## Add vertical line in ax3 for unrolled_array
             self.q_line_3 = self.ax3.axvline(x=1, color="r")
 
-            ## Creat buttons
+            ## Create buttons
             self.axqplus = self.fig.add_axes([0.9, 0.03, 0.04, 0.05])
             self.axqminus = self.fig.add_axes([0.02, 0.03, 0.04, 0.05])
             self.bqplus = Button(self.axqplus, "q+")
