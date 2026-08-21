@@ -3,19 +3,19 @@
 This module is import-safe off-beamline (no ``bluesky``/``event_model``/Tiled/
 ``pyFAI`` imports; only ``numpy``, a base dependency). It assembles the plain
 dictionaries describing the processed-data event that
-:class:`pdf_auto.live_dispatcher.PDFAnalysisDispatcher` re-emits after a run's
+:class:`pdf_auto.callbacks.live_dispatcher.PDFAnalysisDispatcher` re-emits after a run's
 ``stop`` document.
 
 Keeping this logic here lets the offline test suite verify the exact shape and
 contents of the analysis events without any beamline services. The beamline-only
-glue (subscribing to the raw stream, running :class:`pdf_auto.reduction.PDFReducer`,
-publishing over ZMQ) lives in :mod:`pdf_auto.live_dispatcher`, and the file
-writing lives in :mod:`pdf_auto.save_data`.
+glue (subscribing to the raw stream, running :class:`pdf_auto.reduction.reduction.PDFReducer`,
+publishing over ZMQ) lives in :mod:`pdf_auto.callbacks.live_dispatcher`, and the file
+writing lives in :mod:`pdf_auto.callbacks.save_data`.
 
 Payload convention: the ``reduced`` event carries **the reduced arrays inline**
 (2D image, integration cake, 1D q/I and tth/I columns, and the S(Q)/F(Q)/G(r)
 pdfgetter) plus the target output paths and header metadata, so a downstream
-:class:`pdf_auto.save_data.SaveData` callback can persist every product without
+:class:`pdf_auto.callbacks.save_data.SaveData` callback can persist every product without
 touching Tiled or re-running the pipeline. Scalars/paths are still included for
 lightweight subscribers (indexers, plotters) that do not need the raw arrays.
 """
@@ -64,7 +64,7 @@ def analysis_event_data(
         names, etc.).
     arrays:
         Optional mapping of ``<name> -> array-like`` reduced products carried
-        inline for :class:`pdf_auto.save_data.SaveData` (e.g. ``image``,
+        inline for :class:`pdf_auto.callbacks.save_data.SaveData` (e.g. ``image``,
         ``cake``, ``q``, ``iq``, ``tth``). Values are kept as-is (numpy arrays);
         ``None`` values are skipped.
 

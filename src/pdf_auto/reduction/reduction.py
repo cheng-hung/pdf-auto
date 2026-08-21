@@ -4,8 +4,8 @@ from diffpy.pdfgetx import PDFConfig
 from pdfstream.transformation.main import get_pdf
 
 # from diffpy.pdfgetx.pdfgetter import PDFConfigError
+from ..core.utilities import AutoBackground, get_header_rows
 from . import integration
-from .utilities import AutoBackground, get_header_rows
 
 
 class PDFReducer(integration.ImageIntegrator):
@@ -72,10 +72,10 @@ class PDFReducer(integration.ImageIntegrator):
         """Filename prefix (with treatment suffix) for the PDFgetX products.
 
         Mirrors the suffix logic of
-        :meth:`pdf_auto.image_processing.ImageData2D.output_data_path`:
+        :meth:`pdf_auto.reduction.image_processing.ImageData2D.output_data_path`:
         ``_sum`` for stitched pilatus, ``_flat`` for flat-fielded pe1c, and
         ``_sub`` otherwise. Returned as a plain string so the value can be
-        published and used by :class:`pdf_auto.save_data.SaveData`.
+        published and used by :class:`pdf_auto.callbacks.save_data.SaveData`.
         """
         if "pilatus" in self.detector:
             return f"{self.file_name_prefix}_sum"
@@ -94,7 +94,7 @@ class PDFReducer(integration.ImageIntegrator):
         ``gr``). These plain numpy arrays are picklable and survive ZMQ, unlike
         the ``PDFGetter`` object itself, which may hold non-picklable state and
         silently break :class:`bluesky.callbacks.zmq.RemoteDispatcher`
-        deserialization. :class:`pdf_auto.save_data.SaveData` writes the files
+        deserialization. :class:`pdf_auto.callbacks.save_data.SaveData` writes the files
         from these arrays.
         """
         import numpy as np
@@ -111,7 +111,7 @@ class PDFReducer(integration.ImageIntegrator):
 
         Returns ``(pdf_arrays, process_det_dir, pdfgetter_prefix)`` where
         ``pdf_arrays`` is ``{out_type: (2, N) ndarray}`` (see
-        :meth:`pdfgetter_arrays`). :class:`pdf_auto.save_data.SaveData` writes
+        :meth:`pdfgetter_arrays`). :class:`pdf_auto.callbacks.save_data.SaveData` writes
         the ``.sq``/``.fq``/``.gr`` files from these arrays. This method
         performs no file I/O and never returns the live ``PDFGetter`` object, so
         the published ``reduced`` event stays fully picklable across ZMQ.
@@ -188,7 +188,7 @@ class PDFReducer(integration.ImageIntegrator):
 
         iq_array = iq_df.to_numpy().T
         # Compute the pdfgetter and return it with its target dir + prefix.
-        # Writing S(Q)/F(Q)/G(r) is deferred to pdf_auto.save_data.SaveData.
+        # Writing S(Q)/F(Q)/G(r) is deferred to pdf_auto.callbacks.save_data.SaveData.
         return self.compute_pdfgetter(iq_array)
 
 

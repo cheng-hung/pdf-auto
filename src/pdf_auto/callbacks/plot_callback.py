@@ -2,9 +2,9 @@
 
 A Bluesky callback (following the ``bluesky.callbacks`` format) that consumes the
 ``reduced`` stream published by
-:class:`pdf_auto.live_dispatcher.PDFAnalysisDispatcher` and draws the beamline's
+:class:`pdf_auto.callbacks.live_dispatcher.PDFAnalysisDispatcher` and draws the beamline's
 interactive figures (processed image + histogram, masked image + I(Q), and
-S(Q)/F(Q)/G(r)) by reusing the existing :class:`pdf_auto.plotting.ImagePlotter`
+S(Q)/F(Q)/G(r)) by reusing the existing :class:`pdf_auto.plotting.plotting.ImagePlotter`
 and its slider/ring tuners.
 
 Design notes:
@@ -19,7 +19,7 @@ Design notes:
   thread.
 - Plots are drawn from the **inline arrays** in ``doc['data']`` (``image``,
   ``cake``, ``mask``, ``q``/``iq``, ``pdf_arrays``, ``poni_path``), so there is
-  no file re-reading and no race with :class:`pdf_auto.save_data.SaveData`.
+  no file re-reading and no race with :class:`pdf_auto.callbacks.save_data.SaveData`.
 - Tuner objects returned by ``ImagePlotter`` hold widget callbacks and must be
   retained for the lifetime of the run, so they are stored on ``self``.
 
@@ -36,8 +36,8 @@ import pandas as pd
 from bluesky.callbacks.mpl_plotting import QtAwareCallback
 from bluesky.callbacks.zmq import RemoteDispatcher
 
-from . import plotting
-from .config import DEFAULT_CONFIG_PATH
+from ..config import DEFAULT_CONFIG_PATH
+from ..plotting import plotting
 from .save_data import read_publish_config
 
 logger = logging.getLogger(__name__)
@@ -48,7 +48,7 @@ ini_config = str(DEFAULT_CONFIG_PATH)
 class PlotData(QtAwareCallback):
     """Draw the beamline figures for each ``reduced`` event.
 
-    One :class:`pdf_auto.plotting.ImagePlotter` is (re)created per run so figures
+    One :class:`pdf_auto.plotting.plotting.ImagePlotter` is (re)created per run so figures
     reset between samples. Nothing is written to disk.
     """
 
@@ -154,7 +154,7 @@ def run_plot_zmq(
     import matplotlib.pyplot as plt
     from bluesky.callbacks.mpl_plotting import initialize_qt_teleporter
 
-    from .qt_kicker import install_qt_kicker
+    from ..core.qt_kicker import install_qt_kicker
 
     # Initialize the Qt 'teleporter' on the main thread up front so PlotData
     # (a QtAwareCallback) can safely hand documents to the GUI thread even
@@ -169,7 +169,7 @@ def run_plot_zmq(
     elif isinstance(prefix, str):
         prefix = prefix.encode()
 
-    # Interactive, non-focus-stealing plots (matches the Kafka consumer setup).
+    # Interactive, non-focus-stealing plots.
     plt.ion()
     plt.rcParams["figure.raise_window"] = False
 
@@ -181,7 +181,7 @@ def run_plot_zmq(
     # asyncio loop, so the Qt event loop never runs on its own and Matplotlib
     # widgets (sliders/buttons) stay unresponsive. install_qt_kicker schedules a
     # periodic callback on the asyncio loop that pumps Qt GUI events, keeping the
-    # tuners interactive. This mirrors consumer.run_zmq_server.
+    # tuners interactive.
     install_qt_kicker(rd.loop)
 
     rd.subscribe(PlotData())

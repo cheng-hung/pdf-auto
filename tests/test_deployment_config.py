@@ -5,26 +5,24 @@ from pathlib import Path
 REPOSITORY_ROOT = Path(__file__).parents[1]
 
 
-def test_pixi_task_launches_package_directly() -> None:
+def test_pixi_analysis_task_launches_package_directly() -> None:
     with (REPOSITORY_ROOT / "pixi.toml").open("rb") as stream:
         pixi_config = tomllib.load(stream)
 
-    task = pixi_config["tasks"]["pdf_auto"]
+    task = pixi_config["tasks"]["pdf-analysis"]
 
     assert task["cmd"] == "python -m pdf_auto pdf"
     assert task["env"]["PYTHONPATH"].endswith("/pdf-auto/src")
     assert task["env"]["MPLBACKEND"] == "qtagg"
 
 
-def test_pixi_analysis_task_launches_analysis_mode() -> None:
+def test_pixi_has_no_kafka_task() -> None:
     with (REPOSITORY_ROOT / "pixi.toml").open("rb") as stream:
         pixi_config = tomllib.load(stream)
 
-    task = pixi_config["tasks"]["pdf-analysis"]
-
-    assert task["cmd"] == "python -m pdf_auto pdf --mode analysis"
-    assert task["env"]["PYTHONPATH"].endswith("/pdf-auto/src")
-    assert task["env"]["MPLBACKEND"] == "qtagg"
+    # The Kafka file-writing consumer was removed from this branch.
+    assert "pdf_auto" not in pixi_config["tasks"]
+    assert set(pixi_config["tasks"]) == {"pdf-analysis", "pdf-save", "pdf-plot"}
 
 
 def test_pixi_save_task_launches_save_subcommand() -> None:
@@ -64,10 +62,8 @@ def test_pixi_declares_active_runtime_dependencies() -> None:
     dependencies = set(pixi_config["dependencies"])
     assert {
         "bluesky-base",
-        "bluesky-kafka",
         "event-model",
         "matplotlib-base",
-        "nslsii",
         "numpy",
         "pandas",
         "pyside6",
@@ -78,6 +74,8 @@ def test_pixi_declares_active_runtime_dependencies() -> None:
         "tiled-client",
     } <= dependencies
 
+    # Kafka was removed from this branch.
+    assert "bluesky-kafka" not in dependencies
     assert "bluesky-queueserver" not in dependencies
     assert "ophyd" not in dependencies
     assert "pymatgen" not in dependencies

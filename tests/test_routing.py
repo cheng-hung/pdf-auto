@@ -1,6 +1,6 @@
 import pytest
 
-from pdf_auto.routing import is_dark_start, plan_names, should_process_start
+from pdf_auto.core.routing import is_dark_start, plan_names, should_process_start
 
 
 @pytest.mark.parametrize(

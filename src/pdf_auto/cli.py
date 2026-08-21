@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import sys
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -11,14 +10,17 @@ from .config import DEFAULT_CONFIG_PATH
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """Build the parser without initializing beamline services."""
+    """Build the ``pdf-analysis`` parser without initializing beamline services."""
     parser = argparse.ArgumentParser(
-        prog="pdf-auto",
-        description="Run the automatic PDF beamline reduction workflow.",
+        prog="pdf-analysis",
+        description=(
+            "Run the ZMQ-driven PDFAnalysisDispatcher that reduces runs and "
+            "publishes a Bluesky 'reduced' analysis stream."
+        ),
     )
     parser.add_argument(
         "beamline",
-        help="Beamline acronym used for both Kafka and the Tiled profile.",
+        help="Beamline acronym used as the Tiled profile name.",
     )
     parser.add_argument(
         "--config",
@@ -27,68 +29,39 @@ def build_parser() -> argparse.ArgumentParser:
         help=f"INI configuration path (default: {DEFAULT_CONFIG_PATH}).",
     )
     parser.add_argument(
-        "--mode",
-        choices=("consumer", "analysis"),
-        default="consumer",
-        help=(
-            "Which workflow to run: 'consumer' (default) runs the Kafka "
-            "file-writing reduction; 'analysis' runs the ZMQ-driven "
-            "PDFAnalysisDispatcher that re-emits a Bluesky analysis stream."
-        ),
-    )
-    parser.add_argument(
         "--zmq-address",
         default=None,
         help=(
-            "ZMQ document-proxy output socket for --mode analysis. Overrides "
-            "the [LISTEN TO] zmq_address in the INI when given."
+            "ZMQ document-proxy output socket to listen on. Overrides the "
+            "[LISTEN TO] zmq_address in the INI when given."
         ),
     )
     parser.add_argument(
         "--prefix",
         default=None,
         help=(
-            "RemoteDispatcher prefix filter for --mode analysis. Overrides the "
-            "[LISTEN TO] prefix in the INI when given."
+            "RemoteDispatcher prefix filter for the listen stream. Overrides "
+            "the [LISTEN TO] prefix in the INI when given."
         ),
     )
     return parser
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Start the selected beamline workflow."""
+    """Start the ZMQ analysis-stream dispatcher (``pdf-analysis``)."""
     args = build_parser().parse_args(argv)
 
-    # Keep package inspection, tests, and ``--help`` independent of beamline
-    # services and the local PDFgetX wheel by importing lazily per mode.
-    if args.mode == "analysis":
-        from .live_dispatcher import run_analysis_stream_zmq
+    # Import lazily so package inspection, tests, and ``--help`` stay free of
+    # the beamline-only deps and the local PDFgetX wheel.
+    from .callbacks.live_dispatcher import run_analysis_stream_zmq
 
-        run_analysis_stream_zmq(
-            args.beamline,
-            ini_config=str(args.config),
-            zmq_address=args.zmq_address,
-            prefix=args.prefix,
-        )
-        return 0
-
-    from .consumer import run_kafka_consumer
-
-    run_kafka_consumer(args.beamline, ini_config=str(args.config))
+    run_analysis_stream_zmq(
+        args.beamline,
+        ini_config=str(args.config),
+        zmq_address=args.zmq_address,
+        prefix=args.prefix,
+    )
     return 0
-
-
-def analysis_main(argv: Sequence[str] | None = None) -> int:
-    """Console-script entry point that defaults to the analysis mode.
-
-    Equivalent to ``pdf-auto <beamline> --mode analysis`` but exposed as its own
-    ``pdf-analysis`` script and Pixi task. Any explicit ``--mode`` on the
-    command line still wins.
-    """
-    argv = list(sys.argv[1:] if argv is None else argv)
-    if not any(arg == "--mode" or arg.startswith("--mode=") for arg in argv):
-        argv = [*argv, "--mode", "analysis"]
-    return main(argv)
 
 
 def build_save_parser() -> argparse.ArgumentParser:
@@ -136,7 +109,7 @@ def save_main(argv: Sequence[str] | None = None) -> int:
 
     # Import lazily so package inspection and ``--help`` stay free of the
     # beamline-only deps (bluesky/pdfstream/tifffile).
-    from .save_data import run_save_data_zmq
+    from .callbacks.save_data import run_save_data_zmq
 
     run_save_data_zmq(
         ini_config=str(args.config),
@@ -190,7 +163,7 @@ def plot_main(argv: Sequence[str] | None = None) -> int:
 
     # Import lazily so package inspection and ``--help`` stay free of the
     # beamline-only deps (bluesky/pyFAI/matplotlib GUI).
-    from .plot_callback import run_plot_zmq
+    from .callbacks.plot_callback import run_plot_zmq
 
     run_plot_zmq(
         ini_config=str(args.config),

@@ -1,19 +1,19 @@
 """ZMQ-driven Bluesky secondary (analysis) stream for PDF reduction.
 
-This module re-emits the results of the existing stop-driven, Tiled-backed
-reduction pipeline (:class:`pdf_auto.reduction.PDFReducer`) as a Bluesky
+This module re-emits the results of the stop-driven, Tiled-backed reduction
+pipeline (:class:`pdf_auto.reduction.reduction.PDFReducer`) as a Bluesky
 secondary document stream, using
 :class:`bluesky.callbacks.stream.LiveDispatcher`.
 
-It is intentionally kept separate from :mod:`pdf_auto.consumer`: the analysis
-stream is document-oriented and meant to be driven over **ZMQ** (a
-:class:`bluesky.callbacks.zmq.RemoteDispatcher`), whereas ``consumer.py`` holds
-the Kafka file-writing workflow. Subscribing this dispatcher to a live ZMQ
-source is left for later; :func:`run_analysis_stream_zmq` provides the wiring.
+The analysis stream is document-oriented and driven over **ZMQ** (a
+:class:`bluesky.callbacks.zmq.RemoteDispatcher`): the dispatcher reduces each run
+(compute-only) and publishes a ``reduced`` event that the SaveData and PlotData
+callbacks subscribe to. :func:`run_analysis_stream_zmq` provides the wiring.
 
 Like the rest of the beamline modules, this imports ``bluesky``/Tiled/PDFgetX at
 top level and is only importable on the beamline (the ``beamline`` extra). The
-pure, off-beamline-safe payload logic lives in :mod:`pdf_auto.analysis_stream`.
+pure, off-beamline-safe payload logic lives in
+:mod:`pdf_auto.callbacks.analysis_stream`.
 """
 
 from __future__ import annotations
@@ -27,16 +27,16 @@ from bluesky.callbacks.stream import LiveDispatcher
 from bluesky.callbacks.zmq import Publisher, RemoteDispatcher
 from tiled.client import from_profile
 
-from . import reduction
+from ..reduction import reduction
 from .analysis_stream import (
     ANALYSIS_STREAM_NAME,
     analysis_data_keys,
     analysis_event_data,
 )
-from .config import DEFAULT_CONFIG_PATH
-from .routing import is_dark_start, should_process_start
+from ..config import DEFAULT_CONFIG_PATH
+from ..core.routing import is_dark_start, should_process_start
+from ..core.utilities import ServerState
 from .save_data import read_publish_config
-from .utilities import ServerState
 
 ini_config = str(DEFAULT_CONFIG_PATH)
 
@@ -66,13 +66,13 @@ class PDFAnalysisDispatcher(LiveDispatcher):
     """Re-emit PDF reduction results as a Bluesky secondary (analysis) stream.
 
     This wraps the existing stop-driven, Tiled-backed reduction pipeline
-    (:class:`pdf_auto.reduction.PDFReducer`) inside a
+    (:class:`pdf_auto.reduction.reduction.PDFReducer`) inside a
     :class:`bluesky.callbacks.stream.LiveDispatcher`. The reduction itself is
     unchanged: images are read from Tiled after the raw ``stop`` document, then
     integrated and PDF-reduced. Instead of only writing files and plotting, this
     dispatcher additionally emits a synthesized analysis stream so downstream
-    subscribers (a Tiled writer, live plots, adaptive agents, or another ZMQ/
-    Kafka analysis topic) can consume the results.
+    subscribers (SaveData, PlotData, a Tiled writer, or adaptive agents) can
+    consume the results.
 
     ``LiveDispatcher`` re-emits ``start``/``stop`` itself (injecting
     ``original_run_uid`` and new uids). This subclass overrides ``start`` to run
@@ -85,8 +85,8 @@ class PDFAnalysisDispatcher(LiveDispatcher):
       stop-driven and reads full image stacks from Tiled; there is nothing
       useful to transform per raw event.
     - This dispatcher is *compute-only*: it publishes the reduced arrays, target
-      paths, and header metadata inline (see :mod:`pdf_auto.analysis_stream`) and
-      performs no file I/O. Writing is done by :class:`pdf_auto.save_data.SaveData`.
+      paths, and header metadata inline (see :mod:`pdf_auto.callbacks.analysis_stream`) and
+      performs no file I/O. Writing is done by :class:`pdf_auto.callbacks.save_data.SaveData`.
     """
 
     def __init__(self, beamline_acronym: str, ini_config: str):
@@ -195,7 +195,7 @@ class PDFAnalysisDispatcher(LiveDispatcher):
 
         # Wait for data to be written to the databroker, then run the
         # compute-only pipeline. This dispatcher performs no file I/O; all
-        # writing is done by pdf_auto.save_data.SaveData from the published
+        # writing is done by pdf_auto.callbacks.save_data.SaveData from the published
         # ``reduced`` event below.
         print("[STEP 1/4] Waiting 1 s for data to land in the databroker...\n",
               flush=True)

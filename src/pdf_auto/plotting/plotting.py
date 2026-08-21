@@ -3,8 +3,8 @@ import numpy as np
 import numpy.ma as ma
 import pandas as pd
 
+from ..core.utilities import bin_ndarray, get_header_rows, random_color
 from .plot_widgets import HistogramTuner, ThreeSubTuner
-from .utilities import bin_ndarray, get_header_rows, random_color
 
 
 class OpenFigures:

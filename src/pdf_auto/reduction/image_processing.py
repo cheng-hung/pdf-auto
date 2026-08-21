@@ -4,7 +4,7 @@ from configparser import ConfigParser
 import numpy as np
 import tifffile
 
-from .routing import should_process_start
+from ..core.routing import should_process_start
 
 
 def _readable_time(unix_time):
@@ -434,7 +434,7 @@ class ImageData2D(ImageDataConfig):
         """Process the current run's detector image without writing it.
 
         Populates ``self.process_img`` and returns ``(process_img, tiff_fn)``.
-        File I/O is the responsibility of :class:`pdf_auto.save_data.SaveData`;
+        File I/O is the responsibility of :class:`pdf_auto.callbacks.save_data.SaveData`;
         this method only computes the array and its intended output path so the
         analysis stream can publish both.
         """

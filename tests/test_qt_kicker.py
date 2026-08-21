@@ -1,7 +1,7 @@
 import asyncio
 import sys
 
-from pdf_auto import qt_kicker
+from pdf_auto.core import qt_kicker
 
 
 def test_qt_kicker_is_import_safe() -> None:

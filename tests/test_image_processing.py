@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from pdf_auto.image_processing import (
+from pdf_auto.reduction.image_processing import (
     ImageData2D,
     ImageDataConfig,
     classify_acquisition_mode,

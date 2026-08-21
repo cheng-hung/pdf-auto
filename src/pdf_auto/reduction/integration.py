@@ -332,7 +332,7 @@ class ImageIntegrator(image_processing.ImageData2D):
         iq_fn = self.output_data_path(sub_name="iq", file_type="iq")
         tth_fn = self.output_data_path(sub_name="tth", file_type="xy")
 
-        # File I/O is deferred to :class:`pdf_auto.save_data.SaveData`. Record
+        # File I/O is deferred to :class:`pdf_auto.callbacks.save_data.SaveData`. Record
         # the number of header rows the saver will write so downstream code
         # (e.g. auto-background) can skip them consistently.
         self.num_rows_header = 1 + len(md)

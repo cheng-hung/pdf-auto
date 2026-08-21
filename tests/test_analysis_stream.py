@@ -1,6 +1,6 @@
 import numpy as np
 
-from pdf_auto.analysis_stream import (
+from pdf_auto.callbacks.analysis_stream import (
     ANALYSIS_STREAM_NAME,
     analysis_data_keys,
     analysis_event_data,

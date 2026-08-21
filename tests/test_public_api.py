@@ -1,4 +1,4 @@
-from pdf_auto.utilities import (
+from pdf_auto.core.utilities import (
     AutoBackground,
     ServerState,
     auto_bkg,

@@ -2,7 +2,7 @@
 
 This is a Bluesky callback (following the ``bluesky.callbacks`` format) that
 consumes the ``reduced`` analysis stream published by
-:class:`pdf_auto.live_dispatcher.PDFAnalysisDispatcher` and writes every product
+:class:`pdf_auto.callbacks.live_dispatcher.PDFAnalysisDispatcher` and writes every product
 to disk:
 
 - the processed detector image as ``.tiff``;
@@ -25,7 +25,7 @@ event). The dispatcher extracts the pdfgetter output arrays; SaveData writes the
 
 Beamline-only: ``tifffile`` is imported at top level, so this module belongs to
 the ``beamline`` extra. The pure payload shape lives in
-:mod:`pdf_auto.analysis_stream`.
+:mod:`pdf_auto.callbacks.analysis_stream`.
 """
 
 from __future__ import annotations
@@ -40,7 +40,7 @@ import tifffile
 from bluesky.callbacks.core import CallbackBase
 from bluesky.callbacks.zmq import RemoteDispatcher
 
-from .config import DEFAULT_CONFIG_PATH
+from ..config import DEFAULT_CONFIG_PATH
 
 ini_config = str(DEFAULT_CONFIG_PATH)
 
@@ -91,7 +91,7 @@ def read_publish_config(ini_config: str) -> tuple[str, str, bytes]:
 def write_iq_file(fn, df, md, header=("#q_A^-1", "I(q)")):
     """Write a 1D integration file (``.iq``/``.xy``) with a metadata header.
 
-    Mirrors the historical ``pdf_auto.integration.iq_saver`` output so files are
+    Mirrors the historical ``pdf_auto.reduction.integration.iq_saver`` output so files are
     byte-for-byte compatible with the previous file-writing workflow. Returns
     the number of header rows written.
     """
@@ -141,7 +141,7 @@ class SaveData(CallbackBase):
     """Write reduced PDF products carried on the ``reduced`` event stream.
 
     The event ``data`` produced by
-    :func:`pdf_auto.analysis_stream.analysis_event_data` carries inline arrays
+    :func:`pdf_auto.callbacks.analysis_stream.analysis_event_data` carries inline arrays
     (``image``, 1D dataframes) plus target paths and header metadata. This
     callback writes each product that is present; PDF-only products
     (``sq``/``fq``/``gr``) are written only when the pdfgetter is included.
@@ -160,18 +160,6 @@ class SaveData(CallbackBase):
         self._save_pdf(data)
         print("\n=== SaveData finished writing this event. ===\n", flush=True)
         return doc
-
-    def save(self, data: dict) -> dict:
-        """Write all products in ``data`` and return the S(Q)/F(Q)/G(r) paths.
-
-        Convenience for in-process callers (e.g. the Kafka file-writing
-        consumer) that want the written pdfgetter paths back for plotting. The
-        returned dict is whatever ``write_pdfgetter`` produced (``{}`` when no
-        pdfgetter was present).
-        """
-        self._save_image(data)
-        self._save_integration(data)
-        return self._save_pdf(data)
 
     @staticmethod
     def _save_image(data: dict) -> None:

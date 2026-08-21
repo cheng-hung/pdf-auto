@@ -27,18 +27,16 @@ dependencies = [
 
 [project.optional-dependencies]
 beamline = [
-    "bluesky-kafka",
+    "bluesky",
     "diffpy.pdfgetx",
     "event-model",
-    "nslsii>=0.11",
     "pdfstream",
     "pyFAI==2025.3.0",
     "tiled-client>=0.2.3",
 ]
 
 [project.scripts]
-pdf-auto = "pdf_auto.cli:main"
-pdf-analysis = "pdf_auto.cli:analysis_main"
+pdf-analysis = "pdf_auto.cli:main"
 pdf-save = "pdf_auto.cli:save_main"
 pdf-plot = "pdf_auto.cli:plot_main"
 

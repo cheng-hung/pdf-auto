@@ -1,12 +1,35 @@
 # pdf-auto
 
 `pdf-auto` is the automatic area-detector data-reduction workflow used at the
-NSLS-II PDF beamline. It listens for completed Bluesky runs, retrieves the run
-from Tiled, processes the detector image, integrates the image to one-dimensional
-data, and—when appropriate—performs PDF reduction.
+NSLS-II PDF beamline. It listens for completed Bluesky runs over **ZMQ**,
+retrieves the run from Tiled, processes the detector image, integrates the image
+to one-dimensional data, and—when appropriate—performs PDF reduction. The
+reduced results are re-published as a Bluesky **`reduced`** analysis stream that
+separate processes consume to save files and draw plots.
 
 This repository is intended primarily for colleagues who operate, maintain, or
 debug the workflow on the beamline workstation.
+
+> **This branch does not use Kafka.** The workflow is split into three ZMQ
+> processes (analysis → save, plot). The former Kafka file-writing consumer was
+> removed from this branch; that version is preserved on another branch.
+
+## Architecture: three ZMQ processes
+
+Reduction, file writing, and plotting run as three cooperating processes that
+communicate through the beamline's Bluesky ZMQ proxies:
+
+- **`pdf-analysis`** subscribes to the raw run-document stream, reduces each
+  completed run (compute-only, no file I/O), and **publishes** a `reduced`
+  event carrying the output arrays, target paths, and metadata inline.
+- **`pdf-save`** subscribes to the `reduced` stream and writes the
+  `.tiff`/`.iq`/`.xy`/`.sq`/`.fq`/`.gr` files.
+- **`pdf-plot`** subscribes to the `reduced` stream and draws the interactive
+  Matplotlib figures.
+
+Running save and plot as their own processes keeps a slow or crashing GUI (or a
+disk hiccup) from interfering with reduction. See
+[Starting the workflow](#starting-the-workflow) for how to launch them.
 
 ## What the workflow produces
 
@@ -25,7 +48,7 @@ Dark scans and runs that already contain `original_run_uid` are not processed.
 
 ```mermaid
 flowchart TD
-    A["Bluesky run documents"] --> B["Kafka consumer in pdf_auto.consumer"]
+    A["Raw Bluesky run documents (ZMQ)"] --> B["pdf-analysis:\nPDFAnalysisDispatcher"]
     B --> C{"Start document is eligible?"}
     C -->|"Dark or previously processed run"| D["Skip run"]
     C -->|"Data run"| E["Load run from Tiled"]
@@ -34,25 +57,27 @@ flowchart TD
     G -->|"Configured multi-position run"| H["Stitch detector images"]
     G -->|"Single-position PE run"| I["Subtract dark image when available"]
     G -->|"Other supported run"| J["Read detector image"]
-    H --> K["Save processed TIFF"]
+    H --> K["Processed image (array)"]
     I --> K
     J --> K
     K --> L["Load mask and PONI calibration"]
     L --> M["pyFAI 2D integration and percentile filtering"]
-    M --> N["Save I(Q) and two-theta data"]
+    M --> N["I(Q) and two-theta (arrays)"]
     N --> O{"PDF acquisition and reduction enabled?"}
-    O -->|"Yes"| P["PDFgetX reduction"]
-    P --> Q["Save S(Q), F(Q), and G(r)"]
+    O -->|"Yes"| P["PDFgetX reduction (arrays)"]
     O -->|"No"| R["Finish after integration"]
-    K --> S["Update interactive plots"]
-    N --> S
-    Q --> S
+    K --> PUB["Publish 'reduced' event\n(arrays + paths + metadata)"]
+    N --> PUB
+    P --> PUB
+    PUB --> SAVE["pdf-save:\nSaveData writes tiff/iq/tth/sq/fq/gr"]
+    PUB --> PLOT["pdf-plot:\nPlotData draws figures"]
 ```
 
 Processing is triggered by Bluesky documents, but the data reduction itself is
-performed after the run's `stop` document is received. The active server uses a
-unique Kafka consumer group on each launch, so it receives new documents without
-sharing work with another consumer instance.
+performed after the run's `stop` document is received. The dispatcher is
+**compute-only**: it returns arrays (never writing files) and publishes them on
+the `reduced` stream; `pdf-save` is the sole file writer and `pdf-plot` the sole
+plotter.
 
 ## Beamline environment
 
@@ -60,7 +85,7 @@ The environment is defined in [`pixi.toml`](pixi.toml). It currently targets:
 
 - Linux x86-64 (`linux-64`);
 - Python 3.12;
-- the NSLS-II Bluesky, Kafka, and Tiled infrastructure;
+- the NSLS-II Bluesky and Tiled infrastructure, driven over ZMQ;
 - pyFAI for azimuthal integration; and
 - PDFstream/PDFgetX for PDF reduction.
 
@@ -71,10 +96,11 @@ not be changed there unless that deployment or wheel location changes.
 The workflow also expects:
 
 - a working Tiled profile matching the beamline acronym, normally `pdf`;
-- `/etc/bluesky/kafka.yml` with Kafka connection information;
+- the beamline Bluesky ZMQ proxies (the `[LISTEN TO]` and `[PUBLISH TO]` sockets
+  in [`pdf_auto_config.ini`](pdf_auto_config.ini));
 - access to the configured NSLS-II data directories;
 - detector masks and PONI calibration files; and
-- a graphical session for the Qt/Matplotlib displays.
+- a graphical session for the Qt/Matplotlib displays (`pdf-plot`).
 
 ## Installation
 
@@ -89,40 +115,43 @@ The first installation on the beamline workstation will generate a new
 the workflow has been validated there; the previous lock described the removed
 multi-environment profile and is intentionally not retained.
 
-## Starting the active server
+## Starting the workflow
 
-After installation, start the server with the `pdf_auto` Pixi task:
+The workflow runs as three Pixi tasks, typically each in its own terminal.
+Start the reduction dispatcher, plus the save and plot subscribers:
 
 ```bash
-pixi run pdf_auto
+pixi run pdf-analysis   # reduce runs and publish the 'reduced' stream
+pixi run pdf-save       # subscribe and write tiff/iq/tth/sq/fq/gr files
+pixi run pdf-plot       # subscribe and draw interactive figures
 ```
 
-The repository has one default Pixi environment. The task runs the package with
-the beamline source directory on `PYTHONPATH` and selects the Qt Matplotlib
-backend, equivalent to:
+The repository has one default Pixi environment. Each task runs the package with
+the beamline source directory on `PYTHONPATH` and the Qt Matplotlib backend. For
+example, `pdf-analysis` is equivalent to:
 
 ```bash
 PYTHONPATH=/home/xf28id1/src/pdf-auto/src MPLBACKEND=qtagg python -m pdf_auto pdf
 ```
 
-Here, `pdf` is both the beamline acronym used to construct the Kafka topic and
-the Tiled profile name used by the processing factory. The server subscribes to:
+Here, `pdf` is the **Tiled profile name** used to load runs. `pdf-analysis`
+listens on the ZMQ socket in the INI `[LISTEN TO]` section and publishes to the
+`[PUBLISH TO]` proxy; `pdf-save` and `pdf-plot` subscribe to `[PUBLISH TO]`.
 
-```text
-pdf.bluesky.runengine.documents
-```
-
-Stop the consumer with `Ctrl+C`.
+Stop any process with `Ctrl+C`.
 
 After installing the package, the equivalent standard entry points are:
 
 ```bash
-pdf-auto pdf
-python -m pdf_auto pdf
+pdf-analysis pdf        # or: python -m pdf_auto pdf
+pdf-save                # or: python -m pdf_auto save
+pdf-plot                # or: python -m pdf_auto plot
 ```
 
-Use `--config /path/to/config.ini` to test another configuration while retaining
-the beamline workstation path as the default.
+`pdf-save` and `pdf-plot` take no beamline acronym; they only subscribe to the
+published stream. All three accept `--config /path/to/config.ini`;
+`pdf-analysis` also accepts `--zmq-address`/`--prefix` and the subscribers accept
+`--host`/`--prefix` to override the INI sockets.
 
 The default INI path in [`config.py`](src/pdf_auto/config.py) is intentional for
 the beamline workstation. It can be overridden with `--config` for testing or a
@@ -137,8 +166,31 @@ are beamline deployment paths and should not be replaced with generic examples.
 ### `[topics]`
 
 Defines the raw and analysis catalog names. These values are retained for the
-beamline data model even though the current entry point obtains its Tiled client
-from the beamline profile.
+beamline data model even though the entry point obtains its Tiled client from the
+beamline profile.
+
+### `[LISTEN TO]`
+
+The ZMQ source `pdf-analysis` subscribes to for raw run documents:
+
+- `zmq_address` is the proxy output socket to read from; and
+- `prefix` is the `RemoteDispatcher` prefix filter (matches the raw publisher).
+
+Override at runtime with `--zmq-address` / `--prefix`.
+
+### `[PUBLISH TO]`
+
+The ZMQ proxies for the re-published `reduced` stream. **Publish and subscribe
+are different proxy sockets**, bridged upstream:
+
+- `publish_host` — where `pdf-analysis` publishes the `reduced` documents;
+- `subscribe_host` — where `pdf-save` and `pdf-plot` receive them; and
+- `prefix` — the `reduced` stream prefix bytestring (must not contain a space).
+
+Both sockets are the proxies' `out.sock` files (the publish side attaches to the
+`pdf-tcp-in-ipc-out` proxy's out socket; the subscribe side reads the
+`pdf-ipc-in-ipc-out` proxy's out socket). Do not collapse them into one address.
+Subscribers override with `--host` / `--prefix`.
 
 ### `[PATH]`
 
@@ -232,18 +284,22 @@ run metadata and confirm it is scientifically correct for the sample.
 
 ## Output layout and filenames
 
-Outputs are written below:
+Outputs are written by `pdf-save` below:
 
 ```text
 <user_data>/<tiff_base>/<sample_name>/<detector>/
-├── img/
-├── iq/
-└── tth/
+├── img/         # processed detector image (.tiff)
+├── iq/          # I(Q) (.iq)
+├── tth/         # two-theta (.xy)
+├── sq/          # S(Q) (.sq)   PDF acquisitions only
+├── fq/          # F(Q) (.fq)   PDF acquisitions only
+└── gr/          # G(r) (.gr)   PDF acquisitions only
 ```
 
-PDFgetX products are written in the detector directory. The base filename includes
-the sample name, acquisition date/time, first six UID characters, and—when
-available—temperature. A suffix records the image treatment:
+The PDFgetX products (`sq`/`fq`/`gr`) are written one per output type into their
+own subdirectories. The base filename includes the sample name, acquisition
+date/time, first six UID characters, and—when available—temperature. A suffix
+records the image treatment:
 
 - `_sum`: multi-position images were stitched;
 - `_sub`: a single-position image was dark-subtracted, or exported directly when
@@ -255,25 +311,50 @@ headers.
 
 ## Code map
 
+The package (`src/pdf_auto/`) is grouped into subpackages by responsibility.
+
+Top level:
+
 | File | Responsibility |
 |---|---|
-| [`cli.py`](src/pdf_auto/cli.py) | Command-line parsing and server startup |
-| [`consumer.py`](src/pdf_auto/consumer.py) | Active Kafka event routing and processing orchestration |
-| [`routing.py`](src/pdf_auto/routing.py) | Service-independent decisions about which start documents to process |
-| [`image_processing.py`](src/pdf_auto/image_processing.py) | Configuration, Tiled run access, acquisition classification, dark subtraction, stitching, and output paths |
-| [`integration.py`](src/pdf_auto/integration.py) | Mask/calibration selection and pyFAI 2D-to-1D integration |
-| [`reduction.py`](src/pdf_auto/reduction.py) | PDFgetX configuration, automatic background scaling, and PDF reduction |
-| [`plotting.py`](src/pdf_auto/plotting.py) | High-level interactive plots |
-| [`plot_widgets.py`](src/pdf_auto/plot_widgets.py) | Matplotlib sliders, buttons, and plot controls |
-| [`utilities.py`](src/pdf_auto/utilities.py) | Shared parsing, array, plotting, logging, and background helpers |
-| [`callbacks.py`](legacy/servers/callbacks.py) | Experimental/unused callback code retained for development reference |
-| [`zmq_server.py`](legacy/servers/zmq_server.py) | Alternative server implementation; currently not working |
-| [`plugin_00.py`](legacy/servers/plugin_00.py) | Legacy compatibility wrapper; no longer used by the Pixi task |
+| [`cli.py`](src/pdf_auto/cli.py) | Argument parsing and the `pdf-analysis`/`pdf-save`/`pdf-plot` entry points |
+| [`__main__.py`](src/pdf_auto/__main__.py) | `python -m pdf_auto`: routes `save`/`plot`/else to the entry points |
+| [`config.py`](src/pdf_auto/config.py) | Default INI path (beamline deployment) |
 
-The [`legacy/replay_tools/`](legacy/replay_tools/) directory contains replay
-utilities and calibration assets from older server-testing workflows. It is
-retained for reference and manual event replay; it is not the active server and
-is not an automated test suite.
+`reduction/` — the compute pipeline:
+
+| File | Responsibility |
+|---|---|
+| [`image_processing.py`](src/pdf_auto/reduction/image_processing.py) | Configuration, Tiled run access, acquisition classification, dark subtraction, stitching, output paths |
+| [`integration.py`](src/pdf_auto/reduction/integration.py) | Mask/calibration selection and pyFAI 2D-to-1D integration |
+| [`reduction.py`](src/pdf_auto/reduction/reduction.py) | PDFgetX configuration, automatic background scaling, and PDF reduction (`PDFReducer`) |
+
+`callbacks/` — the Bluesky ZMQ stream callbacks:
+
+| File | Responsibility |
+|---|---|
+| [`live_dispatcher.py`](src/pdf_auto/callbacks/live_dispatcher.py) | `PDFAnalysisDispatcher` (compute + publish) and `run_analysis_stream_zmq` |
+| [`save_data.py`](src/pdf_auto/callbacks/save_data.py) | `SaveData` file writer and `run_save_data_zmq` |
+| [`plot_callback.py`](src/pdf_auto/callbacks/plot_callback.py) | `PlotData` figure callback and `run_plot_zmq` |
+| [`analysis_stream.py`](src/pdf_auto/callbacks/analysis_stream.py) | Pure `reduced`-event payload builders (off-beamline-safe) |
+
+`plotting/` — Matplotlib figures and widgets:
+
+| File | Responsibility |
+|---|---|
+| [`plotting.py`](src/pdf_auto/plotting/plotting.py) | `ImagePlotter` high-level interactive plots |
+| [`plot_widgets.py`](src/pdf_auto/plotting/plot_widgets.py) | Matplotlib sliders, buttons, ring-overlay tuners |
+
+`core/` — shared helpers:
+
+| File | Responsibility |
+|---|---|
+| [`routing.py`](src/pdf_auto/core/routing.py) | Service-independent decisions about which start documents to process |
+| [`utilities.py`](src/pdf_auto/core/utilities.py) | Shared parsing, array, plotting, and background helpers |
+| [`qt_kicker.py`](src/pdf_auto/core/qt_kicker.py) | Pumps the Qt event loop while the ZMQ asyncio loop runs (keeps plots interactive) |
+
+The [`legacy/`](legacy/) directory contains dead reference code and older
+replay/testing utilities. It is excluded from tooling and is not an entry point.
 
 ## Development
 
@@ -281,18 +362,23 @@ The repository now uses the Scientific Python `src/` package layout. Runtime
 deployment remains managed by Pixi, while package metadata and developer-tool
 configuration live in [`pyproject.toml`](pyproject.toml).
 
-Install the package with test dependencies in an isolated Python 3.12 environment,
-then run:
+Install the package with test dependencies in an isolated Python 3.12
+environment (`pip install -e '.[dev]'`), then run:
 
 ```bash
 pytest
 ruff check .
 ruff format --check .
+mypy
 ```
 
 Tests marked `beamline` require the NSLS-II services, calibration assets, and
 local PDFgetX wheel. The default test suite is offline and does not require those
-resources.
+resources. To keep it that way, the beamline-only dependencies (`bluesky`,
+`tiled`, `pyFAI`, `diffpy.pdfgetx`, `pdfstream`) live in the `beamline` extra and
+must only be imported inside `reduction/`, `plotting/`, and `callbacks/`
+beamline modules — never at import time in `cli.py`, `config.py`, or the
+`core/`/`analysis_stream.py` modules that the offline tests import.
 
 ### Repository support files
 
@@ -312,17 +398,24 @@ repository aligned with the Scientific Python template.
 
 ## Troubleshooting
 
-### The server cannot connect to Kafka
+### `pdf-save` / `pdf-plot` receive nothing (only the startup banner)
 
-Confirm that `/etc/bluesky/kafka.yml` exists, is readable, and contains the
-beamline Kafka configuration. Also confirm that the requested beamline acronym
-matches the published topic.
+The `reduced` documents are not reaching the subscribers. Check that:
+
+- `pdf-analysis` is running and prints `[EMIT] dispatched ...` lines per run;
+- the `[PUBLISH TO]` `publish_host` (where `pdf-analysis` publishes) and
+  `subscribe_host` (where the subscribers read) point at the correct, distinct
+  proxy sockets — using one socket for both, or the wrong proxy, silently drops
+  everything; and
+- the `prefix` matches on both sides.
+
+The subscribers run their `RemoteDispatcher` with `strict=True`, so a genuine
+deserialization failure raises loudly rather than being dropped.
 
 ### A run UID cannot be loaded
 
 Verify that the Tiled profile exists and that the run is visible through that
-profile. The command-line acronym is also used as the profile name by the active
-factory.
+profile. The `pdf-analysis` command-line acronym is used as the profile name.
 
 ### A mask or PONI file cannot be found
 
@@ -333,7 +426,7 @@ merged PONI file; other acquisitions use detector- and mode-specific files.
 ### No dark image was subtracted
 
 Dark subtraction requires `sc_dk_field_uid` in the run metadata. Without it, the
-raw image is exported and the server prints a warning.
+raw image is used and `pdf-analysis` prints a warning.
 
 ### PDF files were not generated
 
@@ -345,18 +438,18 @@ Confirm all of the following:
 - the PDFgetX environment is available; and
 - the background and Q/r settings are appropriate for the measurement.
 
-### Plot windows do not appear
+### Plot windows appear but sliders/buttons do not respond
 
-The Pixi task selects the Qt Matplotlib backend. Run the workflow in a graphical
-beamline workstation session with a functioning display and PySide6 installation.
+`pdf-plot` installs a Qt "kicker" ([`core/qt_kicker.py`](src/pdf_auto/core/qt_kicker.py))
+that pumps the Qt event loop while the ZMQ `RemoteDispatcher` blocks the thread.
+Interactivity depends on a functioning display and a **PySide6** installation
+with the `qtagg` backend (set by the Pixi task). If widgets are dead, confirm the
+Qt binding is importable and the process is running in a graphical session.
 
-## Legacy and alternative servers
+## Legacy
 
-The active implementation is in [`consumer.py`](src/pdf_auto/consumer.py) and is
-started through the package CLI. The former wrapper is retained as
-[`legacy/servers/plugin_00.py`](legacy/servers/plugin_00.py) for reference.
-[`zmq_server.py`](legacy/servers/zmq_server.py) is an alternative implementation
-but is currently not working and should not be used for routine operation. Files
-under [`legacy/replay_tools/`](legacy/replay_tools/) belong to older
-testing/replay workflows and should not be mistaken for the production entry
-point.
+The `pdf-analysis`/`pdf-save`/`pdf-plot` processes are the active implementation.
+The [`legacy/`](legacy/) directory holds dead reference code and older
+replay/testing utilities; it is excluded from tooling and is not a production
+entry point. The Kafka file-writing consumer that previously lived here was
+removed from this branch and is preserved on a separate branch.

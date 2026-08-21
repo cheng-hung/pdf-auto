@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from pdf_auto.utilities import bin_ndarray, data_to_numpy, get_header_rows
+from pdf_auto.core.utilities import bin_ndarray, data_to_numpy, get_header_rows
 
 
 def test_bin_ndarray_mean() -> None:
