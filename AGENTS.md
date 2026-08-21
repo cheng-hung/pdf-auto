@@ -39,7 +39,8 @@ installed by default. These modules import them at top level and will fail to
 import off-beamline:
 
 - `consumer.py`, `reduction.py`, `integration.py`, `plot_widgets.py`,
-  `plotting.py` (via `plot_widgets`), `live_dispatcher.py`, `save_data.py`
+  `plotting.py` (via `plot_widgets`), `live_dispatcher.py`, `save_data.py`,
+  `plot_callback.py`
 
 Off-beamline-safe modules (imported by the offline tests): `cli.py`,
 `routing.py`, `utilities.py`, `image_processing.py`, `config.py`,
@@ -63,7 +64,14 @@ imports isolated to the modules above so the offline suite stays green.
     `PDFAnalysisDispatcher` that publishes a reduced document stream.
   - `pixi run pdf-save` = `python -m pdf_auto save` → `cli:save_main` →
     `save_data.run_save_data_zmq`: subscribes to the reduced stream and writes
-    files. `__main__.py` routes first arg `save` to `save_main`.
+    files.
+  - `pixi run pdf-plot` = `python -m pdf_auto plot` → `cli:plot_main` →
+    `plot_callback.run_plot_zmq`: subscribes to the reduced stream and draws
+    figures. `PlotData` subclasses `QtAwareCallback` (teleports docs to the main
+    GUI thread) and reuses `plotting.ImagePlotter`, plotting from the inline
+    reduced arrays (no file re-read).
+  - `__main__.py` routes first arg `save`→`save_main`, `plot`→`plot_main`, else
+    `main`.
   - The CLI arg (`pdf`) is BOTH the Kafka topic prefix and the Tiled profile
     name.
 - Default INI path is hardcoded in `config.py` to a beamline path; override with

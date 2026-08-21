@@ -40,6 +40,7 @@ beamline = [
 pdf-auto = "pdf_auto.cli:main"
 pdf-analysis = "pdf_auto.cli:analysis_main"
 pdf-save = "pdf_auto.cli:save_main"
+pdf-plot = "pdf_auto.cli:plot_main"
 
 [dependency-groups]
 test = ["pytest>=9", "pytest-cov>=7"]

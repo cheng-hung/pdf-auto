@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from pdf_auto.cli import build_parser, build_save_parser
+from pdf_auto.cli import build_parser, build_plot_parser, build_save_parser
 from pdf_auto.config import DEFAULT_CONFIG_PATH
 
 
@@ -89,6 +89,24 @@ def test_save_parser_defaults_to_ini_source_of_truth() -> None:
 
 def test_save_parser_accepts_overrides() -> None:
     args = build_save_parser().parse_args(
+        ["--config", "/tmp/x.ini", "--host", "tcp://h:1", "--prefix", "reduced"]
+    )
+
+    assert args.config == Path("/tmp/x.ini")
+    assert args.host == "tcp://h:1"
+    assert args.prefix == "reduced"
+
+
+def test_plot_parser_defaults_to_ini_source_of_truth() -> None:
+    args = build_plot_parser().parse_args([])
+
+    assert args.config == DEFAULT_CONFIG_PATH
+    assert args.host is None
+    assert args.prefix is None
+
+
+def test_plot_parser_accepts_overrides() -> None:
+    args = build_plot_parser().parse_args(
         ["--config", "/tmp/x.ini", "--host", "tcp://h:1", "--prefix", "reduced"]
     )
 

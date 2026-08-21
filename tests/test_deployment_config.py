@@ -38,6 +38,17 @@ def test_pixi_save_task_launches_save_subcommand() -> None:
     assert task["env"]["MPLBACKEND"] == "qtagg"
 
 
+def test_pixi_plot_task_launches_plot_subcommand() -> None:
+    with (REPOSITORY_ROOT / "pixi.toml").open("rb") as stream:
+        pixi_config = tomllib.load(stream)
+
+    task = pixi_config["tasks"]["pdf-plot"]
+
+    assert task["cmd"] == "python -m pdf_auto plot"
+    assert task["env"]["PYTHONPATH"].endswith("/pdf-auto/src")
+    assert task["env"]["MPLBACKEND"] == "qtagg"
+
+
 def test_pixi_uses_one_default_environment() -> None:
     with (REPOSITORY_ROOT / "pixi.toml").open("rb") as stream:
         pixi_config = tomllib.load(stream)

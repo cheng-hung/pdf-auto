@@ -31,3 +31,4 @@ pdfstream = { git = "https://github.com/NSLS-II-PDF/pdfstream.git", rev = "v0.5.
 pdf_auto = { cmd = "python -m pdf_auto pdf", env = { PYTHONPATH = "/home/xf28id1/src/pdf-auto/src", MPLBACKEND = "qtagg" } }
 pdf-analysis = { cmd = "python -m pdf_auto pdf --mode analysis", env = { PYTHONPATH = "/home/xf28id1/src/pdf-auto/src", MPLBACKEND = "qtagg" } }
 pdf-save = { cmd = "python -m pdf_auto save", env = { PYTHONPATH = "/home/xf28id1/src/pdf-auto/src", MPLBACKEND = "qtagg" } }
+pdf-plot = { cmd = "python -m pdf_auto plot", env = { PYTHONPATH = "/home/xf28id1/src/pdf-auto/src", MPLBACKEND = "qtagg" } }
