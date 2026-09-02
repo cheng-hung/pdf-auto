@@ -16,6 +16,7 @@ bluesky-base = "==1.15.0"
 # Containers and ImageData2D fails on ``self.run.start``.
 databroker = "*"
 event-model = "*"
+tiled-client = "==0.2.16"
 ipython = ">=9.5"
 matplotlib-base = ">=3.10,<4"
 numpy = ">2"
@@ -24,7 +25,7 @@ pyside6 = "*"
 pyfai = "==2025.3.0"
 scipy = ">=1.17,<2"
 tifffile = "*"
-tiled-client = ">=0.2.3,<0.3"
+# tiled-client = ">=0.2.3,<0.3"
 
 [pypi-dependencies]
 # pdf-auto itself, installed from the current git branch on GitHub. This pulls
