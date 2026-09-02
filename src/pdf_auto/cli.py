@@ -6,7 +6,13 @@ import argparse
 from collections.abc import Sequence
 from pathlib import Path
 
-from .config import DEFAULT_CONFIG_PATH
+from .config import CONFIG_ENV_VAR, resolve_config_path
+
+_CONFIG_HELP = (
+    "INI configuration path. When omitted, resolution order is: "
+    f"${CONFIG_ENV_VAR} env var, the beamline deployment path if present, "
+    "then the packaged default template."
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -25,8 +31,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--config",
         type=Path,
-        default=DEFAULT_CONFIG_PATH,
-        help=f"INI configuration path (default: {DEFAULT_CONFIG_PATH}).",
+        default=None,
+        help=_CONFIG_HELP,
     )
     parser.add_argument(
         "--zmq-address",
@@ -57,7 +63,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     run_analysis_stream_zmq(
         args.beamline,
-        ini_config=str(args.config),
+        ini_config=str(resolve_config_path(args.config)),
         zmq_address=args.zmq_address,
         prefix=args.prefix,
     )
@@ -81,8 +87,8 @@ def build_save_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--config",
         type=Path,
-        default=DEFAULT_CONFIG_PATH,
-        help=f"INI configuration path (default: {DEFAULT_CONFIG_PATH}).",
+        default=None,
+        help=_CONFIG_HELP,
     )
     parser.add_argument(
         "--host",
@@ -112,7 +118,7 @@ def save_main(argv: Sequence[str] | None = None) -> int:
     from .callbacks.save_data import run_save_data_zmq
 
     run_save_data_zmq(
-        ini_config=str(args.config),
+        ini_config=str(resolve_config_path(args.config)),
         host=args.host,
         prefix=args.prefix,
     )
@@ -135,8 +141,8 @@ def build_plot_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--config",
         type=Path,
-        default=DEFAULT_CONFIG_PATH,
-        help=f"INI configuration path (default: {DEFAULT_CONFIG_PATH}).",
+        default=None,
+        help=_CONFIG_HELP,
     )
     parser.add_argument(
         "--host",
@@ -166,7 +172,7 @@ def plot_main(argv: Sequence[str] | None = None) -> int:
     from .callbacks.plot_callback import run_plot_zmq
 
     run_plot_zmq(
-        ini_config=str(args.config),
+        ini_config=str(resolve_config_path(args.config)),
         host=args.host,
         prefix=args.prefix,
     )

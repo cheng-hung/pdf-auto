@@ -153,9 +153,22 @@ published stream. All three accept `--config /path/to/config.ini`;
 `pdf-analysis` also accepts `--zmq-address`/`--prefix` and the subscribers accept
 `--host`/`--prefix` to override the INI sockets.
 
-The default INI path in [`config.py`](src/pdf_auto/config.py) is intentional for
-the beamline workstation. It can be overridden with `--config` for testing or a
-different deployment without changing the beamline default.
+### Which INI is used
+
+When `--config` is omitted, [`config.py`](src/pdf_auto/config.py) resolves the
+INI in this order:
+
+1. `--config /path/to/config.ini` (explicit);
+2. the `PDF_AUTO_CONFIG` environment variable;
+3. the beamline deployment path
+   (`/home/xf28id1/src/pdf-auto/pdf_auto_config.ini`) **if it exists**; then
+4. the template shipped inside the package
+   ([`src/pdf_auto/data/pdf_auto_config.ini`](src/pdf_auto/data/pdf_auto_config.ini)).
+
+The packaged template keeps the structural defaults and the conventional ZMQ
+socket names, but its `[PATH]` roots are placeholders — a real deployment must
+point at a populated INI via `--config` or `PDF_AUTO_CONFIG`. On the beamline
+workstation the live INI at the repo root is selected automatically by step 3.
 
 ## Configuration
 

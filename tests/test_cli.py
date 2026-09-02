@@ -1,15 +1,15 @@
 from pathlib import Path
 
 from pdf_auto.cli import build_parser, build_plot_parser, build_save_parser
-from pdf_auto.config import DEFAULT_CONFIG_PATH
 
 
-def test_cli_uses_beamline_deployment_config_by_default() -> None:
+def test_cli_config_defaults_to_none_for_runtime_resolution() -> None:
     args = build_parser().parse_args(["pdf"])
 
     assert args.beamline == "pdf"
-    assert args.config == DEFAULT_CONFIG_PATH
-    assert args.config.name == "pdf_auto_config.ini"
+    # --config defaults to None; resolve_config_path() applies precedence at
+    # runtime (env var, beamline path if present, then packaged default).
+    assert args.config is None
 
 
 def test_cli_accepts_config_override() -> None:
@@ -41,8 +41,9 @@ def test_cli_accepts_zmq_overrides() -> None:
 def test_save_parser_defaults_to_ini_source_of_truth() -> None:
     args = build_save_parser().parse_args([])
 
-    # No beamline acronym; host/prefix default to None so [PUBLISH TO] is used.
-    assert args.config == DEFAULT_CONFIG_PATH
+    # No beamline acronym; config/host/prefix default to None so the INI
+    # (resolved at runtime) and its [PUBLISH TO] section are the source of truth.
+    assert args.config is None
     assert args.host is None
     assert args.prefix is None
 
@@ -60,7 +61,7 @@ def test_save_parser_accepts_overrides() -> None:
 def test_plot_parser_defaults_to_ini_source_of_truth() -> None:
     args = build_plot_parser().parse_args([])
 
-    assert args.config == DEFAULT_CONFIG_PATH
+    assert args.config is None
     assert args.host is None
     assert args.prefix is None
 

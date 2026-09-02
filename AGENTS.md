@@ -102,8 +102,16 @@ All are `python -m pdf_auto ...` → `cli`; `__main__.py` routes first arg
   arrays (no file re-read). `run_plot_zmq` installs `core.qt_kicker` so the Qt
   event loop stays live while `RemoteDispatcher` blocks the thread.
 
-Default INI path is hardcoded in `config.py` to a beamline path; override with
-`--config` for local testing rather than editing the default.
+Config resolution lives in `config.resolve_config_path()` (import-safe, no
+beamline deps). Precedence: `--config` > `$PDF_AUTO_CONFIG` > the beamline
+absolute `DEFAULT_CONFIG_PATH` *if it exists* > the packaged template
+`pdf_auto/data/pdf_auto_config.ini`. `--config` defaults to `None` in argparse;
+each `*_main` resolves at runtime (do not restore a concrete argparse default —
+tests assert `args.config is None`). The packaged template keeps structural
+defaults + ZMQ socket names but placeholders the `[PATH]` site roots; the live
+beamline INI stays at the repo root and is picked up by the absolute-path
+fallback. The template ships as package data (`[tool.hatch.build] artifacts`),
+so keep `pdf_auto/data/` (with its `__init__.py`) in the wheel.
 
 ## ZMQ analysis stream (pdf-analysis → pdf-save)
 

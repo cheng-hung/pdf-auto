@@ -33,12 +33,10 @@ from .analysis_stream import (
     analysis_data_keys,
     analysis_event_data,
 )
-from ..config import DEFAULT_CONFIG_PATH
+from ..config import resolve_config_path
 from ..core.routing import is_dark_start, should_process_start
 from ..core.utilities import ServerState
 from .save_data import read_publish_config
-
-ini_config = str(DEFAULT_CONFIG_PATH)
 
 # Final fallbacks used when the INI has no ``[LISTEN TO]`` section and no
 # explicit override is passed. ``DEFAULT_ZMQ_ADDRESS`` is shared with the CLI.
@@ -314,7 +312,7 @@ class PDFAnalysisDispatcher(LiveDispatcher):
 
 def run_analysis_stream_zmq(
     beamline_acronym: str,
-    ini_config: str = ini_config,
+    ini_config: str | None = None,
     zmq_address: str | None = None,
     prefix: bytes | str | None = None,
     publish: bool = True,
@@ -349,6 +347,7 @@ def run_analysis_stream_zmq(
         Optional extra ``cb(name, doc)`` callbacks subscribed to the analysis
         stream (e.g. an in-process SaveData for testing).
     """
+    ini_config = str(resolve_config_path(ini_config))
     ini_zmq_address, ini_prefix = read_listen_config(ini_config)
     if zmq_address is None:
         zmq_address = ini_zmq_address

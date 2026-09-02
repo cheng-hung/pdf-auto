@@ -36,13 +36,11 @@ import pandas as pd
 from bluesky.callbacks.mpl_plotting import QtAwareCallback
 from bluesky.callbacks.zmq import RemoteDispatcher
 
-from ..config import DEFAULT_CONFIG_PATH
+from ..config import resolve_config_path
 from ..plotting import plotting
 from .save_data import read_publish_config
 
 logger = logging.getLogger(__name__)
-
-ini_config = str(DEFAULT_CONFIG_PATH)
 
 
 class PlotData(QtAwareCallback):
@@ -136,7 +134,7 @@ class PlotData(QtAwareCallback):
 
 
 def run_plot_zmq(
-    ini_config: str = ini_config,
+    ini_config: str | None = None,
     host: str | None = None,
     prefix: bytes | str | None = None,
     extra_subscribers: Iterable[Callable[[str, dict], None]] | None = None,
@@ -161,6 +159,7 @@ def run_plot_zmq(
     # though RemoteDispatcher processes them from its background asyncio thread.
     initialize_qt_teleporter()
 
+    ini_config = str(resolve_config_path(ini_config))
     _publish_host, subscribe_host, ini_prefix = read_publish_config(ini_config)
     if host is None:
         host = subscribe_host

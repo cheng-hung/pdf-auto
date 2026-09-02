@@ -59,6 +59,11 @@ docs = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/pdf_auto"]
+# Bundle the packaged default INI template (resolved by pdf_auto.config).
+artifacts = ["src/pdf_auto/data/*.ini"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/pdf_auto", "tests", "pdf_auto_config.ini", "README.md"]
 
 [tool.pytest.ini_options]
 minversion = "9.0"

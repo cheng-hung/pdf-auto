@@ -40,9 +40,7 @@ import tifffile
 from bluesky.callbacks.core import CallbackBase
 from bluesky.callbacks.zmq import RemoteDispatcher
 
-from ..config import DEFAULT_CONFIG_PATH
-
-ini_config = str(DEFAULT_CONFIG_PATH)
+from ..config import resolve_config_path
 
 # Final fallbacks mirroring the ``[PUBLISH TO]`` INI section.
 #
@@ -211,7 +209,7 @@ class SaveData(CallbackBase):
 
 
 def run_save_data_zmq(
-    ini_config: str = ini_config,
+    ini_config: str | None = None,
     host: str | None = None,
     prefix: bytes | str | None = None,
     extra_subscribers: Iterable[Callable[[str, dict], None]] | None = None,
@@ -223,6 +221,7 @@ def run_save_data_zmq(
     **OUT** socket (``subscribe_host`` in ``[PUBLISH TO]``), then starts polling.
     ``host`` overrides the subscribe address; ``prefix`` overrides the prefix.
     """
+    ini_config = str(resolve_config_path(ini_config))
     _publish_host, subscribe_host, ini_prefix = read_publish_config(ini_config)
     if host is None:
         host = subscribe_host
