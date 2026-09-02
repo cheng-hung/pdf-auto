@@ -148,10 +148,21 @@ gotchas (all cost real beamline debugging):
 - ZMQ callbacks run in an asyncio loop with no TTY — use `print(..., flush=True)`
   or output won't appear.
 
+## Deployment: pixi installs pdf-auto from git
+
+`pixi.toml` lists `pdf-auto` in `[pypi-dependencies]` as a **git-branch**
+dependency (`{ git = ".../pdf-auto.git", branch = "Live_dispatcher" }`), so
+`pixi install` pulls what is **pushed** to that branch — not the local working
+tree. Push commits before `pixi install` to update the deployed package. Because
+the package is installed, the `[tasks]` no longer set `PYTHONPATH` (only
+`MPLBACKEND=qtagg`). If you rename the branch or fork, update this dependency and
+`test_deployment_config.py`.
+
 ## Do not touch without cause
 
 - Beamline-absolute paths in `pixi.toml`, `config.py`, and `pdf_auto_config.ini`
   (including the `[LISTEN TO]` / `[PUBLISH TO]` ZMQ sockets) are deployment
   values, not placeholders. `test_deployment_config.py` asserts the Pixi task
-  set (`pdf-analysis`, `pdf-save`, `pdf-plot`), the dependency set, and the INI
-  `[LISTEN TO]`/`[PUBLISH TO]` sections — update it if you change those.
+  set (`pdf-analysis`, `pdf-save`, `pdf-plot`), the `pdf-auto` git dependency,
+  the conda dependency set, and the INI `[LISTEN TO]`/`[PUBLISH TO]` sections —
+  update it if you change those.

@@ -27,10 +27,16 @@ tifffile = "*"
 tiled-client = ">=0.2.3,<0.3"
 
 [pypi-dependencies]
+# pdf-auto itself, installed from the current git branch on GitHub. This pulls
+# what is PUSHED to origin/Live_dispatcher (push local commits to update). The
+# package data (default INI) and console scripts come along with the install.
+pdf-auto = { git = "https://github.com/cheng-hung/pdf-auto.git", branch = "Live_dispatcher" }
 "diffpy.pdfgetx" = { path = "/home/xf28id1/Documents/pdfgetx-2.4.0-wheels/diffpy_pdfgetx-2.4.0-cp312-cp312-linux_x86_64.whl" }
 pdfstream = { git = "https://github.com/NSLS-II-PDF/pdfstream.git", rev = "v0.5.x" }
 
 [tasks]
-pdf-analysis = { cmd = "python -m pdf_auto pdf", env = { PYTHONPATH = "/home/xf28id1/src/pdf-auto/src", MPLBACKEND = "qtagg" } }
-pdf-save = { cmd = "python -m pdf_auto save", env = { PYTHONPATH = "/home/xf28id1/src/pdf-auto/src", MPLBACKEND = "qtagg" } }
-pdf-plot = { cmd = "python -m pdf_auto plot", env = { PYTHONPATH = "/home/xf28id1/src/pdf-auto/src", MPLBACKEND = "qtagg" } }
+# pdf-auto is now installed as a dependency, so the package is importable
+# without PYTHONPATH. Only the Qt Matplotlib backend is set.
+pdf-analysis = { cmd = "python -m pdf_auto pdf", env = { MPLBACKEND = "qtagg" } }
+pdf-save = { cmd = "python -m pdf_auto save", env = { MPLBACKEND = "qtagg" } }
+pdf-plot = { cmd = "python -m pdf_auto plot", env = { MPLBACKEND = "qtagg" } }

@@ -110,6 +110,12 @@ On the beamline workstation, from this repository:
 pixi install
 ```
 
+`pdf-auto` is listed as a dependency in [`pixi.toml`](pixi.toml) and installed
+**from its current git branch on GitHub** (`origin/Live_dispatcher`). Pixi
+installs what is pushed to that branch, so push local commits before
+`pixi install` to pick them up; the package's console scripts and default config
+template are installed with it.
+
 The first installation on the beamline workstation will generate a new
 `pixi.lock` for this reduced environment. Commit that generated lock file after
 the workflow has been validated there; the previous lock described the removed
@@ -126,12 +132,13 @@ pixi run pdf-save       # subscribe and write tiff/iq/tth/sq/fq/gr files
 pixi run pdf-plot       # subscribe and draw interactive figures
 ```
 
-The repository has one default Pixi environment. Each task runs the package with
-the beamline source directory on `PYTHONPATH` and the Qt Matplotlib backend. For
-example, `pdf-analysis` is equivalent to:
+The repository has one default Pixi environment. Because `pdf-auto` is installed
+as a dependency, the package is importable directly (no `PYTHONPATH`); each task
+only selects the Qt Matplotlib backend. For example, `pdf-analysis` is
+equivalent to:
 
 ```bash
-PYTHONPATH=/home/xf28id1/src/pdf-auto/src MPLBACKEND=qtagg python -m pdf_auto pdf
+MPLBACKEND=qtagg python -m pdf_auto pdf
 ```
 
 Here, `pdf` is the **Tiled profile name** used to load runs. `pdf-analysis`

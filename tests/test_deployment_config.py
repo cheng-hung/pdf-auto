@@ -12,8 +12,9 @@ def test_pixi_analysis_task_launches_package_directly() -> None:
     task = pixi_config["tasks"]["pdf-analysis"]
 
     assert task["cmd"] == "python -m pdf_auto pdf"
-    assert task["env"]["PYTHONPATH"].endswith("/pdf-auto/src")
     assert task["env"]["MPLBACKEND"] == "qtagg"
+    # pdf-auto is installed as a dependency, so no PYTHONPATH is needed.
+    assert "PYTHONPATH" not in task["env"]
 
 
 def test_pixi_has_no_kafka_task() -> None:
@@ -32,8 +33,8 @@ def test_pixi_save_task_launches_save_subcommand() -> None:
     task = pixi_config["tasks"]["pdf-save"]
 
     assert task["cmd"] == "python -m pdf_auto save"
-    assert task["env"]["PYTHONPATH"].endswith("/pdf-auto/src")
     assert task["env"]["MPLBACKEND"] == "qtagg"
+    assert "PYTHONPATH" not in task["env"]
 
 
 def test_pixi_plot_task_launches_plot_subcommand() -> None:
@@ -43,8 +44,18 @@ def test_pixi_plot_task_launches_plot_subcommand() -> None:
     task = pixi_config["tasks"]["pdf-plot"]
 
     assert task["cmd"] == "python -m pdf_auto plot"
-    assert task["env"]["PYTHONPATH"].endswith("/pdf-auto/src")
     assert task["env"]["MPLBACKEND"] == "qtagg"
+    assert "PYTHONPATH" not in task["env"]
+
+
+def test_pixi_installs_pdf_auto_from_git_branch() -> None:
+    with (REPOSITORY_ROOT / "pixi.toml").open("rb") as stream:
+        pixi_config = tomllib.load(stream)
+
+    dep = pixi_config["pypi-dependencies"]["pdf-auto"]
+
+    assert dep["git"].endswith("pdf-auto.git")
+    assert dep["branch"] == "Live_dispatcher"
 
 
 def test_pixi_uses_one_default_environment() -> None:
