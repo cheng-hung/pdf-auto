@@ -8,7 +8,9 @@ pyFAI, PDFstream, or the local PDFgetX wheel.
 ## Processing layers
 
 1. `cli.py` parses the beamline acronym and optional INI path.
-2. `consumer.py` receives Bluesky documents and owns run-level orchestration.
+2. `callbacks/live_dispatcher.py` receives Bluesky documents and owns
+   run-level orchestration via `PDFAnalysisDispatcher` and
+   `run_analysis_stream_zmq`.
 3. `routing.py` contains service-independent start-document decisions.
 4. `image_processing.py` reads image streams, subtracts dark images, stitches
    multi-position images, and writes TIFF files.
