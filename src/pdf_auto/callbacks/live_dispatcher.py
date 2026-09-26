@@ -207,6 +207,8 @@ class PDFAnalysisDispatcher(LiveDispatcher):
             f"[STEP 2/4] Image ready -> {os.path.basename(tiff_fn)} "
             f"(poni={os.path.basename(poni_name)}, "
             f"mask={os.path.basename(mask_name)}).\n",
+            f"(poni={poni_name = },\n"
+            f"mask={mask_name = }).\n",
             flush=True,
         )
 
