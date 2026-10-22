@@ -25,7 +25,7 @@ from configparser import ConfigParser
 
 from bluesky.callbacks.stream import LiveDispatcher
 from bluesky.callbacks.zmq import Publisher, RemoteDispatcher
-from tiled.client import from_profile
+from tiled.client import from_profile, from_uri
 
 from ..reduction import reduction
 from .analysis_stream import (
@@ -90,6 +90,7 @@ class PDFAnalysisDispatcher(LiveDispatcher):
     def __init__(self, beamline_acronym: str, ini_config: str):
         super().__init__()
         self.tiled_client = from_profile(beamline_acronym)
+        self.tiled_client = from_uri('https://tiled.nsls2.bnl.gov')[beamline_acronym]['migration']
         self.ini_config = ini_config
         self.factory_log = ServerState()
         self.img_analyzer: reduction.PDFReducer | None = None
