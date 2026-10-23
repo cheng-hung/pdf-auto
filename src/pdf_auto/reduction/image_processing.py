@@ -448,7 +448,7 @@ class ImageData2D(ImageDataConfig):
                 self.process_img = self.subtract_dark()
 
             else:
-                if "lambda" in self.img_key:
+                if "lambda" in self.img_key or "pilatus" in self.img_key:
                     self.process_img = np.float32(
                         getattr(self.run, self.stream_name[0])
                         .read()[self.img_key]
