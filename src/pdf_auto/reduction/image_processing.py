@@ -76,7 +76,8 @@ class ImageData2D(ImageDataConfig):
     @property
     def img_key(self):
         data_keys = list(self.run[self.stream_name[0]].read().keys())
-        k = [key for key in data_keys if "image" in key or key == "lambda1"][0]
+        ## TODO: update date key map
+        k = [key for key in data_keys if "image" in key or key == "lambda1" or key == "pilatus-1"][0]
         return k
         # return f'{self.detector}_image'
 
