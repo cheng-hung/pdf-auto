@@ -332,7 +332,7 @@ class ImageData2D(ImageDataConfig):
             pos_y.append(float(x))
 
             ## Read different position images into zeros array
-            if "lambda" in self.img_key:
+            if "lambda" in self.img_key or "pilatus" in self.img_key:
                 img = np.float64(self.run[self.stream_name[i]][self.img_key].read()[0])
 
             else:
