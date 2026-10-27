@@ -115,6 +115,7 @@ class PlotData(QtAwareCallback):
             poni_path,
             binning=2,
             iq_df=iq_df,
+            logscale=data.get("acq_mode") == "SAXS",
         )
         tuner()
         self._tuners.append(tuner)

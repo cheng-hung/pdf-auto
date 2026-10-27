@@ -93,6 +93,7 @@ class ImagePlotter(OpenFigures):
         aspect=None,
         binning=1,
         iq_df=None,
+        logscale=False,
     ):
         plt.ion()
 
@@ -149,6 +150,12 @@ class ImagePlotter(OpenFigures):
 
         img_tuner.ax2.set_xlabel("Q (A-1)", fontdict=self.xylabel_prop)
         img_tuner.ax2.set_ylabel("I(Q)", fontdict=self.xylabel_prop)
+
+        # Log-log I(Q) for SAXS acquisitions.
+        if logscale:
+            img_tuner.ax2.set_xscale("log")
+            img_tuner.ax2.set_yscale("log")
+
         img_tuner.ax2.legend(prop=self.legend_prop)
 
         # img_tuner.fig.subplots_adjust(left=0.08, right=0.97, top=0.97, bottom=0.1)
