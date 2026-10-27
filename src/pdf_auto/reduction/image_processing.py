@@ -78,8 +78,12 @@ class ImageData2D(ImageDataConfig):
         data_keys = list(self.run[self.stream_name[0]].read().keys())
         ## TODO: update date key map
         k = [key for key in data_keys if "image" in key or key == "lambda1" or key == "pilatus-1"][0]
+        if 'pilatus' in self.detector.name:
+            k = 'pilatus-1'
+        if 'lambda' in self.detector.name:
+            k = 'lambda1'
         return k
-        # return f'{self.detector}_image'
+
 
     @property
     def stream_length(self):
@@ -315,7 +319,6 @@ class ImageData2D(ImageDataConfig):
         my_im1 = np.float32(
         getattr(self.run, self.stream_name[0]).read()[self.img_key].to_numpy()[0]
         )
-
         
         x_size = my_im1.shape[0]  ## pixels
         y_size = my_im1.shape[1]  ## pixels
@@ -337,7 +340,7 @@ class ImageData2D(ImageDataConfig):
 
             ## Read different position images into zeros array
             if "lambda" in self.img_key or "pilatus" in self.img_key:
-                img = np.float64(self.run[self.stream_name[i]][self.img_key].read()[0])
+                img = np.float64(self.run[self.stream_name[0]][self.img_key].read()[0])
 
             else:
                 img = np.float64(
