@@ -310,7 +310,8 @@ class ImageData2D(ImageDataConfig):
         else:
             mask_dir = self.pilatus_PDF
 
-
+        print(f'{self.stream_name = }')
+        print(f'{self.img_key = }')
         my_im1 = np.float32(
         getattr(self.run, self.stream_name[0]).read()[self.img_key].to_numpy()[0]
         )
