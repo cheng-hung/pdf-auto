@@ -73,7 +73,7 @@ class ImageData2D(ImageDataConfig):
     def wavelength(self):  ## unit: angstrom
         return self.run.start["calibration_md"]["Wavelength"] * (10**10)
 
-    @property
+    # @property
     def img_key(self):
         data_keys = list(self.run[self.stream_name[0]].read().keys())
         ## TODO: update date key map
@@ -314,8 +314,12 @@ class ImageData2D(ImageDataConfig):
         else:
             mask_dir = self.pilatus_PDF
 
-        print(f'{self.stream_name = }')
+
+        self.img_key = 'pilatus-1'
+        if 'lambda' in self.detector.name:
+            self.img_key = 'lambda1'
         print(f'{self.img_key = }')
+        
         my_im1 = np.float32(
         getattr(self.run, self.stream_name[0]).read()[self.img_key].to_numpy()[0]
         )
