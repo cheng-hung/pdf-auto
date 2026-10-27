@@ -310,9 +310,16 @@ class ImageData2D(ImageDataConfig):
         else:
             mask_dir = self.pilatus_PDF
 
-        my_im1 = np.float32(
+
+        if 'pilatus' in self.img_key or 'lambda' in self.img_key:
+            my_im1 = np.float32(
+            getattr(self.run, self.stream_name[0]).read()[self.img_key].to_numpy()[0]
+            )
+        else:
+            my_im1 = np.float32(
             getattr(self.run, self.stream_name[0]).read()[self.img_key].to_numpy()[0][0]
-        )
+            )
+        
         x_size = my_im1.shape[0]  ## pixels
         y_size = my_im1.shape[1]  ## pixels
         my_im = np.zeros([x_size, y_size, self.num_positions])
