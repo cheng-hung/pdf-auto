@@ -183,6 +183,11 @@ class PDFAnalysisDispatcher(LiveDispatcher):
         stream_name = list(doc["num_events"].keys())
         analyzer.stream_name = stream_name
 
+        ## update image key (TODO: update date key map)
+        data_keys = list(analyzer.run[analyzer.stream_name[0]].read().keys())
+        k = [key for key in data_keys if "image" in key or key == "lambda1" or key == "pilatus-1"][0]
+        analyzer.img_key = k
+
         print(
             "\n-------------------- [STOP] starting reduction for "
             f"uid={analyzer.full_uid} (sample={analyzer.sample_name}, "

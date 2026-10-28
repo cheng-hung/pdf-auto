@@ -64,6 +64,7 @@ class ImageData2D(ImageDataConfig):
         self.stream_name = []  ## update at stop doc
 
         self.process_img = None
+        self._img_key = ''
 
     @property
     def detector(self):
@@ -73,16 +74,26 @@ class ImageData2D(ImageDataConfig):
     def wavelength(self):  ## unit: angstrom
         return self.run.start["calibration_md"]["Wavelength"] * (10**10)
 
+    # @property
+    # def img_key(self):
+    #     data_keys = list(self.run[self.stream_name[0]].read().keys())
+    #     ## TODO: update date key map
+    #     k = [key for key in data_keys if "image" in key or key == "lambda1" or key == "pilatus-1"][0]
+    #     if 'pilatus' in self.detector:
+    #         k = 'pilatus-1'
+    #     if 'lambda' in self.detector:
+    #         k = 'lambda1'
+    #     return k
+
+
     @property
     def img_key(self):
-        data_keys = list(self.run[self.stream_name[0]].read().keys())
-        ## TODO: update date key map
-        k = [key for key in data_keys if "image" in key or key == "lambda1" or key == "pilatus-1"][0]
-        if 'pilatus' in self.detector:
-            k = 'pilatus-1'
-        if 'lambda' in self.detector:
-            k = 'lambda1'
-        return k
+        return self._img_key
+
+
+    @img_key.setter
+    def img_key(self, key):
+        self._backgroundfile = key
 
 
     @property
@@ -342,6 +353,7 @@ class ImageData2D(ImageDataConfig):
             pos_y.append(float(x))
 
             ## Read different position images into zeros array
+            ## in tiled ['pdf/migration'], somehow the image data stack in the first event TODO: check documents
             if "lambda" in self.img_key or "pilatus" in self.img_key:
                 img = np.float64(self.run[self.stream_name[0]][self.img_key].read()[0])
 
