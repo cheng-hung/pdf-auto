@@ -60,6 +60,15 @@ def read_listen_config(ini_config: str) -> tuple[str, bytes]:
     return zmq_address, prefix.encode()
 
 
+def check_tiled_catalog(ini_config: str) -> str:
+    parser = ConfigParser()
+    parser.read(ini_config)
+    tiled_catalog_name = parser.get(
+        "TILED", "tiled_catalog", fallback='from_profile'
+    )
+    return tiled_catalog_name
+
+
 class PDFAnalysisDispatcher(LiveDispatcher):
     """Re-emit PDF reduction results as a Bluesky secondary (analysis) stream.
 
@@ -89,8 +98,15 @@ class PDFAnalysisDispatcher(LiveDispatcher):
 
     def __init__(self, beamline_acronym: str, ini_config: str):
         super().__init__()
-        self.tiled_client = from_profile(beamline_acronym)
-        self.tiled_client = from_uri('https://tiled.nsls2.bnl.gov')[beamline_acronym]['migration']
+        
+        tiled_catalog_name = check_tiled_catalog(ini_config)
+        
+        if tiled_catalog_name == 'from_profile':
+            self.tiled_client = from_profile(beamline_acronym)
+        
+        if tiled_catalog_name == 'from_uri':
+            self.tiled_client = from_uri('https://tiled.nsls2.bnl.gov')[beamline_acronym]['migration']
+        
         self.ini_config = ini_config
         self.factory_log = ServerState()
         self.img_analyzer: reduction.PDFReducer | None = None
@@ -196,6 +212,7 @@ class PDFAnalysisDispatcher(LiveDispatcher):
             flush=True,
         )
         print(f"[STOP] stream(s): {stream_name}\n", flush=True)
+        print(f"[STOP] img_key: {analyzer.img_key}\n", flush=True)
 
         # Wait for data to be written to the databroker, then run the
         # compute-only pipeline. This dispatcher performs no file I/O; all

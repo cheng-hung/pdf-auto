@@ -89,10 +89,6 @@ class ImageIntegrator(image_processing.ImageData2D):
         n = self.get("PATH", "pe2c_SAXS", fallback="pe2c_SAXS")
         return os.path.join(self.config_base, n)
 
-    @property
-    def lambda_SAXS(self):
-        n = self.get("PATH", "lambda_SAXS", fallback="lambda_SAXS")
-        return os.path.join(self.config_base, n)
 
     @property
     def poni_pilatus(self):

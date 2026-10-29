@@ -93,7 +93,7 @@ class ImageData2D(ImageDataConfig):
 
     @img_key.setter
     def img_key(self, key):
-        self._backgroundfile = key
+        self._img_key = key
 
 
     @property
@@ -123,6 +123,11 @@ class ImageData2D(ImageDataConfig):
     @property
     def pilatus_XRD(self):
         n = self.get("PATH", "pilatus_XRD", fallback="pilatus_XRD")
+        return os.path.join(self.config_base, n)
+
+    @property
+    def lambda_SAXS(self):
+        n = self.get("PATH", "lambda_SAXS", fallback="lambda_SAXS")
         return os.path.join(self.config_base, n)
 
     @property
@@ -322,6 +327,9 @@ class ImageData2D(ImageDataConfig):
         elif self.acq_mode == "XRD":
             mask_dir = self.pilatus_XRD
 
+        elif self.acq_mode == "SAXS":
+            mask_dir = self.lambda_SAXS
+
         else:
             mask_dir = self.pilatus_PDF
 
@@ -330,9 +338,8 @@ class ImageData2D(ImageDataConfig):
         # if 'lambda' in self.detector.name:
         #     self.img_key = 'lambda1'
         print(f'{self.img_key = }')      
-        my_im1 = np.float32(
-        getattr(self.run, self.stream_name[0]).read()[self.img_key].to_numpy()[0]
-        )
+        my_im1 = self.run[self.stream_name[0]].read()[self.img_key].to_numpy()
+        my_im1 = my_im.reshape(my_im1.shape[-2:])
         
         x_size = my_im1.shape[0]  ## pixels
         y_size = my_im1.shape[1]  ## pixels
@@ -354,15 +361,16 @@ class ImageData2D(ImageDataConfig):
 
             ## Read different position images into zeros array
             ## in tiled ['pdf/migration'], somehow the image data stack in the first event TODO: check documents
-            if "lambda" in self.img_key or "pilatus" in self.img_key:
-                img = np.float64(self.run[self.stream_name[0]][self.img_key].read()[0])
+            j = i
+            if self.img_key == "lambda1" or self.img_key == "pilatus-1":
+                j = 0
 
-            else:
-                img = np.float64(
-                    self.run[self.stream_name[i]].read()[self.img_key].to_numpy()[0][0]
-                )
+            ## Below is for BlueskyRun v3.0 not compatible with v2.0
+            #img = np.float32(self.run[self.stream_name[0]][self.img_key].read())
 
-            # img = self.run[self.stream_name[i]].read()[self.img_key].to_numpy()[0][0]
+            img = self.run[self.stream_name[j]].read()[self.img_key].to_numpy()
+            img = img.reshape(img.shape[-2:])
+
             my_im[:, :, i] = img
 
             ## Apply flat field if True
@@ -433,14 +441,14 @@ class ImageData2D(ImageDataConfig):
     def subtract_dark(self):
         """Subtract the referenced dark image, when available."""
 
-        raw_img = np.float32(
-            getattr(self.run, self.stream_name[0]).read()[self.img_key].to_numpy()[0][0]
-        )
+        raw_img = self.run[self.stream_name[0]].read()[self.img_key].to_numpy()
+        raw_img = raw_img.reshape(raw_img.shape[-2:])
 
         try:
             dk_uid = self.run.start["sc_dk_field_uid"]
             dk_run = self.tiled_client[dk_uid]
-            dk_img = np.float32(dk_run.primary.read()[self.img_key].to_numpy()[0][0])
+            dk_img = dk_run.primary.read()[self.img_key].to_numpy()[0][0]
+            dk_img = dk_img.reshape(dk_img.shape[-2:])
             # dk_img = 0.0
 
             sub_img = raw_img - dk_img
@@ -451,7 +459,7 @@ class ImageData2D(ImageDataConfig):
                 "\n******* No dark uid found. Export image without dark subtraction. *******\n"
             )
 
-        return sub_img
+        return np.float32(sub_img)
 
     def compute_processed_image(self):
         """Process the current run's detector image without writing it.
@@ -469,20 +477,11 @@ class ImageData2D(ImageDataConfig):
             if "pe" in self.detector:
                 self.process_img = self.subtract_dark()
 
-            else:
-                if "lambda" in self.img_key or "pilatus" in self.img_key:
-                    self.process_img = np.float32(
-                        getattr(self.run, self.stream_name[0])
-                        .read()[self.img_key]
-                        .to_numpy()[0]
-                    )
-                else:
-                    self.process_img = np.float32(
-                        getattr(self.run, self.stream_name[0])
-                        .read()[self.img_key]
-                        .to_numpy()[0][0]
-                    )
-
+            else: 
+                img = self.run[self.stream_name[0]].read()[self.img_key].to_numpy()
+                img = img.reshape(img.shape[-2:])
+                self.process_img = np.float32(img)
+                
         tiff_fn = self.output_data_path(sub_name="img", file_type="tiff")
         return self.process_img, tiff_fn
 
