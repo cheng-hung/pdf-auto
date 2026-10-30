@@ -64,7 +64,7 @@ class ImageData2D(ImageDataConfig):
         self.stream_name = []  ## update at stop doc
 
         self.process_img = None
-        self._img_key = ''
+        # self._img_key = ''
 
     @property
     def detector(self):
@@ -74,26 +74,22 @@ class ImageData2D(ImageDataConfig):
     def wavelength(self):  ## unit: angstrom
         return self.run.start["calibration_md"]["Wavelength"] * (10**10)
 
-    # @property
-    # def img_key(self):
-    #     data_keys = list(self.run[self.stream_name[0]].read().keys())
-    #     ## TODO: update date key map
-    #     k = [key for key in data_keys if "image" in key or key == "lambda1" or key == "pilatus-1"][0]
-    #     if 'pilatus' in self.detector:
-    #         k = 'pilatus-1'
-    #     if 'lambda' in self.detector:
-    #         k = 'lambda1'
-    #     return k
-
-
     @property
     def img_key(self):
-        return self._img_key
+        data_keys = list(self.run[self.stream_name[0]].read().keys())
+        ## TODO: update date key map
+        k = [key for key in data_keys if "image" in key or key == "lambda1" or key == "pilatus-1"][0]
+        return k
 
 
-    @img_key.setter
-    def img_key(self, key):
-        self._img_key = key
+    # @property
+    # def img_key(self):
+    #     return self._img_key
+
+
+    # @img_key.setter
+    # def img_key(self, key):
+    #     self._img_key = key
 
 
     @property
@@ -338,7 +334,7 @@ class ImageData2D(ImageDataConfig):
         # if 'lambda' in self.detector.name:
         #     self.img_key = 'lambda1'
         print(f'{self.img_key = }')      
-        my_im1 = self.run[self.stream_name[0]].read()[self.img_key].to_numpy()
+        my_im1 = self.run[self.stream_name[0]].read()[self.img_key].to_numpy()[0]
         my_im1 = my_im1.reshape(my_im1.shape[-2:])
         
         x_size = my_im1.shape[0]  ## pixels
@@ -362,13 +358,16 @@ class ImageData2D(ImageDataConfig):
             ## Read different position images into zeros array
             ## in tiled ['pdf/migration'], somehow the image data stack in the first event TODO: check documents
             j = i
+            jj = i
             if self.img_key == "lambda1" or self.img_key == "pilatus-1":
                 j = 0
+            else:
+                jj=0
 
             ## Below is for BlueskyRun v3.0 not compatible with v2.0
             #img = np.float32(self.run[self.stream_name[0]][self.img_key].read())
 
-            img = self.run[self.stream_name[j]].read()[self.img_key].to_numpy()
+            img = self.run[self.stream_name[j]].read()[self.img_key].to_numpy()[jj]
             img = img.reshape(img.shape[-2:])
 
             my_im[:, :, i] = img
@@ -447,7 +446,7 @@ class ImageData2D(ImageDataConfig):
         try:
             dk_uid = self.run.start["sc_dk_field_uid"]
             dk_run = self.tiled_client[dk_uid]
-            dk_img = dk_run.primary.read()[self.img_key].to_numpy()[0][0]
+            dk_img = dk_run.primary.read()[self.img_key].to_numpy()
             dk_img = dk_img.reshape(dk_img.shape[-2:])
             # dk_img = 0.0
 
