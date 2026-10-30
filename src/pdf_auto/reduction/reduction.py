@@ -1,6 +1,7 @@
 import os
 
 from diffpy.pdfgetx import PDFConfig, PDFGetter
+from diffpy.pdfgetx.pdfconfig import PDFConfigError
 
 # from diffpy.pdfgetx.pdfgetter import PDFConfigError
 from ..core.utilities import AutoBackground, get_header_rows
@@ -52,6 +53,7 @@ class PDFReducer(integration.ImageIntegrator):
         super().__init__(*args, **kwargs)
         self._bgscale = self.getfloat("pdfgetx3", "bgscale", fallback=0.98)
         self._backgroundfile = self.get("pdfgetx3", "backgroundfile", fallback="")
+        self._composition = self.run.start["composition_string"]
         self.auto_bkg = 1.0
 
     @property
@@ -79,6 +81,14 @@ class PDFReducer(integration.ImageIntegrator):
         self._backgroundfile = fn
 
     @property
+    def composition(self):
+        return self._composition
+
+    @composition.setter
+    def composition(self, composition_string):
+        self._composition = composition_string
+
+    @property
     def pdfconfig_dict(self):
         return {
             "dataformat": self.get("pdfgetx3", "dataformat", fallback="QA"),
@@ -94,7 +104,7 @@ class PDFReducer(integration.ImageIntegrator):
             "rmin": self.getfloat("pdfgetx3", "rmin", fallback=0.0),
             "rmax": self.getfloat("pdfgetx3", "rmax", fallback=100.0),
             "rstep": self.getfloat("pdfgetx3", "rstep", fallback=0.1),
-            "composition": self.run.start["composition_string"],
+            "composition": self.composition,
             "temperature_K": self.temperature,
         }
 
@@ -208,7 +218,17 @@ class PDFReducer(integration.ImageIntegrator):
         print(f"\n{self.pdfconfig_dict = }\n")
         # print(self.pdfconfig())
 
-        pdfgetter = get_pdf(self.pdfconfig(), iq_df)
+        try:
+            pdfgetter = get_pdf(self.pdfconfig(), iq_df)
+        
+        except PDFConfigError as e:    
+            if "unknown chemical symbol" in e:
+                print(f"\nPDFConfigError: {e}")
+                self.composition = 'Ni1.0'
+                print(f"Set to default composition: Ni1.0")
+            
+            pdfgetter = get_pdf(self.pdfconfig(), iq_df)
+
 
         return (
             self.pdfgetter_arrays(pdfgetter),
