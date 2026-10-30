@@ -64,7 +64,7 @@ class ImageData2D(ImageDataConfig):
         self.stream_name = []  ## update at stop doc
 
         self.process_img = None
-        # self._img_key = ''
+        self._img_key = ''
 
     @property
     def detector(self):
@@ -74,22 +74,22 @@ class ImageData2D(ImageDataConfig):
     def wavelength(self):  ## unit: angstrom
         return self.run.start["calibration_md"]["Wavelength"] * (10**10)
 
-    @property
-    def img_key(self):
-        data_keys = list(self.run[self.stream_name[0]].read().keys())
-        ## TODO: update date key map
-        k = [key for key in data_keys if "image" in key or key == "lambda1" or key == "pilatus-1"][0]
-        return k
-
-
     # @property
     # def img_key(self):
-    #     return self._img_key
+    #     data_keys = list(self.run[self.stream_name[0]].read().keys())
+    #     ## TODO: update date key map
+    #     k = [key for key in data_keys if "image" in key or key == "lambda1" or key == "pilatus-1"][0]
+    #     return k
 
 
-    # @img_key.setter
-    # def img_key(self, key):
-    #     self._img_key = key
+    @property
+    def img_key(self):
+        return self._img_key
+
+
+    @img_key.setter
+    def img_key(self, key):
+        self._img_key = key
 
 
     @property
