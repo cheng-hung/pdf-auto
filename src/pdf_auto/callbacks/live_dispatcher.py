@@ -282,6 +282,9 @@ class PDFAnalysisDispatcher(LiveDispatcher):
             arrays["pdf_arrays"] = pdf_arrays
             arrays["pdfgetter_dir"] = pdf_dir
             arrays["pdfgetter_prefix"] = pdf_prefix
+            # Publish the PDFgetX config dict (built after get_gr so the
+            # auto-bkg-updated bgscales is captured) as the S/F/G file header.
+            arrays["pdfgetter_md"] = analyzer.pdfgetter_header_md()
             scalars["bgscale"] = float(analyzer.pdfconfig().bgscale[0])
             scalars["backgroundfile"] = analyzer.pdfconfig_dict["backgroundfile"]
             print(

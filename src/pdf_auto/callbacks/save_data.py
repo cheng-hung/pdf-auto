@@ -41,6 +41,7 @@ from bluesky.callbacks.core import CallbackBase
 from bluesky.callbacks.zmq import RemoteDispatcher
 
 from ..config import resolve_config_path
+from ..core.file_formats import render_pdfgetx_header
 
 # Final fallbacks mirroring the ``[PUBLISH TO]`` INI section.
 #
@@ -114,7 +115,9 @@ def write_iq_file(fn, df, md, header=("#q_A^-1", "I(q)")):
     return num_row
 
 
-def write_pdf_arrays(saving_dir: str, prefix: str, pdf_arrays: dict) -> dict:
+def write_pdf_arrays(
+    saving_dir: str, prefix: str, pdf_arrays: dict, md: dict | None = None
+) -> dict:
     """Write S(Q)/F(Q)/G(r) (and I(Q)) files from plain (2, N) arrays.
 
     Reproduces the on-disk layout of ``pdfstream.transformation.io``'s
@@ -123,14 +126,28 @@ def write_pdf_arrays(saving_dir: str, prefix: str, pdf_arrays: dict) -> dict:
     ``PDFGetter`` object. ``pdf_arrays`` maps each ``out_type`` (``iq``/``sq``/
     ``fq``/``gr``) to a ``(2, N)`` array of ``[x, y]``. Returns ``{out_type:
     path}`` like ``write_pdfgetter``.
+
+    ``md`` is the ordered PDFgetX config dict
+    (``PDFReducer.pdfgetter_header_md()``); when given, each file gets a
+    ``diffpy.pdfgetx``-style ``[DEFAULT]`` header (see
+    :func:`pdf_auto.core.file_formats.render_pdfgetx_header`) recording how the
+    product was produced, followed by ``%g`` data rows. The file is written as
+    UTF-8 so the ``Å`` column labels survive.
     """
     paths: dict = {}
     for out_type, xy in pdf_arrays.items():
         out_dir = os.path.join(saving_dir, out_type)
         os.makedirs(out_dir, exist_ok=True)
         out_file = os.path.join(out_dir, f"{prefix}.{out_type}")
+
         xy = np.asarray(xy)
-        np.savetxt(out_file, xy.T)
+        header = render_pdfgetx_header(out_type, md) if md else ""
+        with open(out_file, mode="w", encoding="utf-8") as f:
+            if header:
+                f.write(header)
+            for x, y in zip(xy[0], xy[1], strict=True):
+                f.write(f"{x:g} {y:g}\n")
+
         paths[out_type] = out_file
     return paths
 
@@ -195,11 +212,12 @@ class SaveData(CallbackBase):
         pdf_arrays = data.get("pdf_arrays")
         target_dir = data.get("pdfgetter_dir")
         prefix = data.get("pdfgetter_prefix")
+        pdf_md = data.get("pdfgetter_md")
         if not pdf_arrays or not target_dir or not prefix:
             print("\n*** No PDF (S/F/G) products to save. ***\n", flush=True)
             return {}
         os.makedirs(target_dir, exist_ok=True)
-        sqfqgr_path = write_pdf_arrays(target_dir, prefix, pdf_arrays)
+        sqfqgr_path = write_pdf_arrays(target_dir, prefix, pdf_arrays, md=pdf_md)
         for out_type, path in sqfqgr_path.items():
             print(
                 f"\n*** {out_type}: {os.path.basename(path)} saved!! ***\n",

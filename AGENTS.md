@@ -64,9 +64,11 @@ code); do not treat it as an entrypoint.
 ## Import boundary (critical for local work)
 
 Beamline-only deps (`bluesky`, `event_model`, `tiled`, `diffpy.pdfgetx`,
-`pdfstream`, `pyFAI`) are in the `beamline` extra and are NOT installed by
-default. These modules import them at top level and will fail to import
-off-beamline:
+`pyFAI`) are in the `beamline` extra and are NOT installed by default. (This
+branch no longer depends on `pdfstream`: `get_pdf` was reimplemented directly on
+`diffpy.pdfgetx` in `reduction/reduction.py`, and the Qt kicker is vendored in
+`core/qt_kicker.py`.) These modules import the beamline deps at top level and
+will fail to import off-beamline:
 
 - `reduction/image_processing.py`, `reduction/integration.py`,
   `reduction/reduction.py`, `plotting/plot_widgets.py`, `plotting/plotting.py`
@@ -75,9 +77,9 @@ off-beamline:
 
 Off-beamline-safe modules (imported by the offline tests): `cli.py`,
 `config.py`, `core/routing.py`, `core/utilities.py`, `core/qt_kicker.py`
-(Matplotlib/Qt imported lazily inside the function), `callbacks/analysis_stream.py`.
-Keep new importable-anywhere logic in these; keep beamline imports isolated to
-the modules above so the offline suite stays green.
+(Matplotlib/Qt imported lazily inside the function), `core/file_formats.py`,
+`callbacks/analysis_stream.py`. Keep new importable-anywhere logic in these; keep
+beamline imports isolated to the modules above so the offline suite stays green.
 
 - `cli.py` must stay import-safe: `main`/`save_main`/`plot_main` import their
   beamline runners **lazily inside the function** (from `.callbacks.*`), never

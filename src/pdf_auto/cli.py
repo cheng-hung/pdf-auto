@@ -114,7 +114,7 @@ def save_main(argv: Sequence[str] | None = None) -> int:
     args = build_save_parser().parse_args(argv)
 
     # Import lazily so package inspection and ``--help`` stay free of the
-    # beamline-only deps (bluesky/pdfstream/tifffile).
+    # beamline-only deps (bluesky/tifffile).
     from .callbacks.save_data import run_save_data_zmq
 
     run_save_data_zmq(

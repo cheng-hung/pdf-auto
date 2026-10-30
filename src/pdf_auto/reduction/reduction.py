@@ -1,11 +1,50 @@
 import os
 
-from diffpy.pdfgetx import PDFConfig
-from pdfstream.transformation.main import get_pdf
+from diffpy.pdfgetx import PDFConfig, PDFGetter
 
 # from diffpy.pdfgetx.pdfgetter import PDFConfigError
 from ..core.utilities import AutoBackground, get_header_rows
 from . import integration
+
+
+def get_pdf(pdfconfig: PDFConfig, chi):
+    """Run the PDFgetX transformation and return the live ``PDFGetter``.
+
+    Direct ``diffpy.pdfgetx`` reimplementation of
+    ``pdfstream.transformation.main.get_pdf`` (with ``plot_setting='OFF'``), so
+    this package no longer depends on ``pdfstream``. ``chi`` must be a
+    ``(2, N)`` array with ``chi[0]`` = Q (or 2theta) and ``chi[1]`` = intensity
+    (no transpose is applied here). The returned ``PDFGetter`` exposes the
+    output arrays as ``.iq``/``.sq``/``.fq``/``.gr``; callers extract them via
+    :meth:`PDFReducer.pdfgetter_arrays` (the live object does not reliably
+    survive pickling).
+    """
+    if chi.ndim != 2:
+        raise ValueError(f"Wrong data shape in chi: {chi.shape}")
+    if chi.shape[0] != 2:
+        raise ValueError(f"Wrong number of rows in chi: {chi.shape[0]}")
+
+    pdfgetter = PDFGetter(pdfconfig)
+    pdfgetter(chi[0], chi[1])
+    return pdfgetter
+
+
+def _pdfgetx_version(config=None) -> str:
+    """Return a ``diffpy.pdfgetx-<version>`` string for file headers.
+
+    Prefers a ``version`` attribute on the live ``PDFConfig`` (native pdfgetx
+    output embeds this), falling back to the installed package version.
+    """
+    version = getattr(config, "version", None)
+    if version:
+        return str(version)
+
+    try:
+        from importlib.metadata import version as _dist_version
+
+        return f"diffpy.pdfgetx-{_dist_version('diffpy.pdfgetx')}"
+    except Exception:  # noqa: BLE001
+        return "diffpy.pdfgetx-unknown"
 
 
 class PDFReducer(integration.ImageIntegrator):
@@ -66,6 +105,44 @@ class PDFReducer(integration.ImageIntegrator):
             setattr(p, key, value)
 
         return p
+
+    def pdfgetter_header_md(self) -> dict:
+        """Ordered config dict for the S(Q)/F(Q)/G(r) file header.
+
+        Mirrors native ``diffpy.pdfgetx`` output: it adds ``version`` and
+        ``mode`` (sourced from the live :class:`PDFConfig`) and uses the plural
+        ``bgscales`` (the actual applied value, including any auto-background
+        update). Ordering is significant --
+        :func:`pdf_auto.core.file_formats.render_pdfgetx_header` splits the keys
+        into the "input/output" and "PDF calculation setup" sections.
+        """
+        config = self.pdfconfig()
+        cfg = self.pdfconfig_dict
+
+        try:
+            bgscales = float(config.bgscale[0])
+        except (TypeError, IndexError):
+            bgscales = self.bgscale
+
+        return {
+            "version": _pdfgetx_version(config),
+            # input and output specifications
+            "dataformat": cfg["dataformat"],
+            "backgroundfile": cfg["backgroundfile"],
+            "outputtype": cfg["outputtype"],
+            # PDF calculation setup
+            "mode": getattr(config, "mode", "xray"),
+            "composition": cfg["composition"],
+            "bgscales": bgscales,
+            "rpoly": cfg["rpoly"],
+            "qmaxinst": cfg["qmaxinst"],
+            "qmin": cfg["qmin"],
+            "qmax": cfg["qmax"],
+            "rmin": cfg["rmin"],
+            "rmax": cfg["rmax"],
+            "rstep": cfg["rstep"],
+            "temperature_K": cfg["temperature_K"],
+        }
 
     @property
     def pdfgetter_prefix(self):
@@ -131,7 +208,7 @@ class PDFReducer(integration.ImageIntegrator):
         print(f"\n{self.pdfconfig_dict = }\n")
         # print(self.pdfconfig())
 
-        pdfgetter = get_pdf(self.pdfconfig(), iq_df, plot_setting="OFF")
+        pdfgetter = get_pdf(self.pdfconfig(), iq_df)
 
         return (
             self.pdfgetter_arrays(pdfgetter),

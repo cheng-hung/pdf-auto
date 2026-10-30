@@ -33,7 +33,6 @@ beamline = [
     "databroker",
     "diffpy.pdfgetx",
     "event-model",
-    "pdfstream",
     "pyFAI==2025.3.0",
     "tiled-client>=0.2.3",
 ]
