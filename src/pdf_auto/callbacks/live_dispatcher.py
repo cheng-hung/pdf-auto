@@ -124,9 +124,15 @@ class PDFAnalysisDispatcher(LiveDispatcher):
         loud print so emission is observable and any dispatch error surfaces.
         """
         name_str = getattr(name, "name", str(name))
+        uid = doc.get("uid")
+        run_start = doc.get("run_start")
         try:
             self.dispatcher.process(name, doc)
-            print(f"[EMIT] dispatched {name_str} document.\n", flush=True)
+            print(
+                f"[EMIT] dispatched {name_str} "
+                f"(uid={uid}, run_start={run_start}).\n",
+                flush=True,
+            )
         except Exception as exc:  # noqa: BLE001
             print(
                 f"[EMIT][ERROR] failed to dispatch {name_str} document: "
