@@ -200,9 +200,9 @@ class PDFAnalysisDispatcher(LiveDispatcher):
             self.img_analyzer = None
             return
 
-        self.img_analyzer = reduction.PDFReducer(
-            doc['run_start'], self.tiled_client, self.ini_config
-        )
+        # self.img_analyzer = reduction.PDFReducer(
+        #     doc['run_start'], self.tiled_client, self.ini_config
+        # )
 
         analyzer = self.img_analyzer
 
@@ -214,7 +214,7 @@ class PDFAnalysisDispatcher(LiveDispatcher):
         print(f'\n{analyzer.run = }')
 
         ## update image key (TODO: update date key map)
-        data_keys = list(analyzer.run[analyzer.stream_name[0]].read().keys())
+        data_keys = list(analyzer.run[stream_name[0]].read().keys())
         k = [key for key in data_keys if "image" in key or key == "lambda1" or key == "pilatus-1"][0]
         analyzer.img_key = k
 
