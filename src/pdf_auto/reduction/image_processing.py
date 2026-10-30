@@ -339,7 +339,7 @@ class ImageData2D(ImageDataConfig):
         #     self.img_key = 'lambda1'
         print(f'{self.img_key = }')      
         my_im1 = self.run[self.stream_name[0]].read()[self.img_key].to_numpy()
-        my_im1 = my_im.reshape(my_im1.shape[-2:])
+        my_im1 = my_im1.reshape(my_im1.shape[-2:])
         
         x_size = my_im1.shape[0]  ## pixels
         y_size = my_im1.shape[1]  ## pixels
