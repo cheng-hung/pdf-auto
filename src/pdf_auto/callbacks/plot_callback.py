@@ -161,6 +161,7 @@ def run_plot_zmq(
     initialize_qt_teleporter()
 
     ini_config = str(resolve_config_path(ini_config))
+    print(f"\n*** [pdf-plot] using INI: {ini_config} ***\n", flush=True)
     _publish_host, subscribe_host, ini_prefix = read_publish_config(ini_config)
     if host is None:
         host = subscribe_host

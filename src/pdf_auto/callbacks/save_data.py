@@ -240,6 +240,7 @@ def run_save_data_zmq(
     ``host`` overrides the subscribe address; ``prefix`` overrides the prefix.
     """
     ini_config = str(resolve_config_path(ini_config))
+    print(f"\n*** [pdf-save] using INI: {ini_config} ***\n", flush=True)
     _publish_host, subscribe_host, ini_prefix = read_publish_config(ini_config)
     if host is None:
         host = subscribe_host

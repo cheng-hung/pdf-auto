@@ -382,6 +382,7 @@ def run_analysis_stream_zmq(
         stream (e.g. an in-process SaveData for testing).
     """
     ini_config = str(resolve_config_path(ini_config))
+    print(f"\n*** [pdf-analysis] using INI: {ini_config} ***\n", flush=True)
     ini_zmq_address, ini_prefix = read_listen_config(ini_config)
     if zmq_address is None:
         zmq_address = ini_zmq_address
