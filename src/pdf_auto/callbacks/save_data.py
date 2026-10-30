@@ -45,12 +45,12 @@ from ..core.file_formats import render_pdfgetx_header
 
 # Final fallbacks mirroring the ``[PUBLISH TO]`` INI section.
 #
-# The reduced stream is published into one proxy and read out of another (see
-# the [PUBLISH TO] comments in pdf_auto_config.ini): the Publisher connects to
-# the pdf-tcp-in-ipc-out proxy's out.sock, while the SaveData/plotting
-# RemoteDispatcher connects to the pdf-ipc-in-ipc-out proxy's out.sock. These
-# are DIFFERENT proxies; do not collapse them into one address.
-DEFAULT_PUBLISH_IN = "ipc:///var/lib/bluesky-zmq-proxy/pdf-tcp-in-ipc-out/out.sock"
+# The reduced stream goes through the ONE ``pdf-ipc-in-ipc-out`` proxy: the
+# Publisher connects to that proxy's ``in.sock`` to push documents in, and the
+# SaveData/plotting RemoteDispatcher connects to the same proxy's ``out.sock``
+# to receive them. publish_host and subscribe_host are the in/out sockets of
+# the same proxy -- they are different sockets but must stay on this proxy.
+DEFAULT_PUBLISH_IN = "ipc:///var/lib/bluesky-zmq-proxy/pdf-ipc-in-ipc-out/in.sock"
 DEFAULT_PUBLISH_OUT = "ipc:///var/lib/bluesky-zmq-proxy/pdf-ipc-in-ipc-out/out.sock"
 DEFAULT_PUBLISH_PREFIX = "reduced"
 

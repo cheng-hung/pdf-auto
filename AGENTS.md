@@ -136,14 +136,17 @@ gotchas (all cost real beamline debugging):
   layout as pdfstream's `write_pdfgetter`. `run_save_data_zmq` uses
   `strict=True` so future deserialization failures raise loudly instead of
   vanishing.
-- **`[PUBLISH TO]` uses a two-proxy topology, not one proxy's in/out.** Publish
-  and subscribe are DIFFERENT proxies bridged upstream:
-  `publish_host = .../pdf-tcp-in-ipc-out/out.sock` (Publisher pushes here) and
-  `subscribe_host = .../pdf-ipc-in-ipc-out/out.sock` (RemoteDispatcher reads
-  here). Both are `out.sock`; `in.sock` / `tcp://localhost:5567` do NOT work for
-  local publishers. `read_publish_config` returns
-  `(publish_host, subscribe_host, prefix)`; a legacy single `host` key still
-  falls back for both. Do not collapse these into one address.
+- **`[PUBLISH TO]` is one proxy's in/out sockets** (the `pdf-ipc-in-ipc-out`
+  proxy): `publish_host = .../pdf-ipc-in-ipc-out/in.sock` (pdf-analysis's
+  Publisher pushes documents IN here) and `subscribe_host =
+  .../pdf-ipc-in-ipc-out/out.sock` (pdf-save/pdf-plot RemoteDispatcher reads
+  OUT here). Publishing to the `out.sock` (or a different proxy) silently drops
+  everything — pdf-analysis still prints its `[EMIT]` lines but nothing reaches
+  the subscribers. `read_publish_config` returns `(publish_host,
+  subscribe_host, prefix)`; a legacy single `host` key still falls back for
+  both. Each `run_*` now prints `using INI: <path>` and the resolved
+  publish/subscribe host at startup — compare the two terminals if the stream
+  goes dark.
 - Reduction methods are **compute-only** (`compute_processed_image`,
   `pct_integration`, `compute_pdfgetter`/`get_gr` return data, not files);
   `callbacks.save_data.SaveData` is the sole writer.
