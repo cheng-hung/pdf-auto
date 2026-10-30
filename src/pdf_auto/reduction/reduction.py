@@ -222,7 +222,7 @@ class PDFReducer(integration.ImageIntegrator):
             pdfgetter = get_pdf(self.pdfconfig(), iq_df)
         
         except PDFConfigError as e:    
-            if "unknown chemical symbol" in e:
+            if "Unknown chemical symbol" in e.args[0]:
                 print(f"\nPDFConfigError: {e}")
                 self.composition = 'Ni1.0'
                 print(f"Set to default composition: Ni1.0")
