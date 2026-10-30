@@ -200,14 +200,18 @@ class PDFAnalysisDispatcher(LiveDispatcher):
             self.img_analyzer = None
             return
 
+        self.img_analyzer = reduction.PDFReducer(
+            doc['run_start'], self.tiled_client, self.ini_config
+        )
+
         analyzer = self.img_analyzer
 
         stream_name = list(doc["num_events"].keys())
         stream_name.sort()
-        print(f'\n{stream_name = }\n')
+        print(f'\n{stream_name = }')
 
         analyzer.stream_name = stream_name
-        print(f'\n{analyzer.run = }\n')
+        print(f'\n{analyzer.run = }')
 
         ## update image key (TODO: update date key map)
         data_keys = list(analyzer.run[analyzer.stream_name[0]].read().keys())
