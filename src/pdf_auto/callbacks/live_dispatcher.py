@@ -203,7 +203,11 @@ class PDFAnalysisDispatcher(LiveDispatcher):
         analyzer = self.img_analyzer
 
         stream_name = list(doc["num_events"].keys())
+        stream_name.sort()
+        print(f'\n{stream_name = }\n')
+
         analyzer.stream_name = stream_name
+        print(f'\n{analyzer.run = }\n')
 
         ## update image key (TODO: update date key map)
         data_keys = list(analyzer.run[analyzer.stream_name[0]].read().keys())
