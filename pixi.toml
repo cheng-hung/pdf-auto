@@ -26,6 +26,7 @@ pyfai = "==2025.3.0"
 scipy = ">=1.17,<2"
 tifffile = "*"
 # tiled-client = ">=0.2.3,<0.3"
+bluesky-tiled-plugins = "==2.0.2"
 
 [pypi-dependencies]
 # pdf-auto itself, installed from the current git branch on GitHub. This pulls
