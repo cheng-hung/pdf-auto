@@ -441,13 +441,13 @@ class ImageData2D(ImageDataConfig):
         """Subtract the referenced dark image, when available."""
 
         raw_img = self.run[self.stream_name[0]].read()[self.img_key].to_numpy()
-        raw_img = raw_img.reshape(raw_img.shape[-2:])
+        raw_img = np.float32(raw_img.reshape(raw_img.shape[-2:]))
 
         try:
             dk_uid = self.run.start["sc_dk_field_uid"]
             dk_run = self.tiled_client[dk_uid]
             dk_img = dk_run.primary.read()[self.img_key].to_numpy()
-            dk_img = dk_img.reshape(dk_img.shape[-2:])
+            dk_img = np.float32(dk_img.reshape(dk_img.shape[-2:]))
             # dk_img = 0.0
 
             sub_img = raw_img - dk_img
